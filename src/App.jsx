@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Package, Warehouse, Receipt, Truck, Clock, CheckCircle2, AlertTriangle,
   LogOut, Plus, Search, MessageCircle, ArrowLeft, X, FileText, CreditCard,
-  MapPin, ClipboardList, Lock, Mail, Upload, FileCheck, ExternalLink,
+  MapPin, ClipboardList, Lock, Mail, Upload, FileCheck, ExternalLink, Settings,
 } from "lucide-react";
 import { supabase, PDF_BUCKET } from "./supabaseClient";
 
@@ -44,12 +44,12 @@ function makeOrderId(existingCount) {
   return `PED-${year}-${String(existingCount + 1).padStart(4, "0")}-${rand}`;
 }
 
-function slaStatus(order, now) {
-  if (order.status === "cerrado") return null;
+function slaStatus(order, slaSettings, now) {
+  if (order.status !== "abierto") return null;
   const stage = order.current_stage;
   const st = order.stages[stage];
   if (!st?.startedAt) return null;
-  const limitMin = order.sla_config[stage] ?? 30;
+  const limitMin = slaSettings?.[stage] ?? 30;
   const elapsedMs = now - new Date(st.startedAt).getTime();
   const elapsedMin = elapsedMs / 60000;
   let state = "ok";
@@ -147,7 +147,6 @@ function LoginScreen({ onAuthed }) {
 /* ============ MODAL NUEVO PEDIDO ============ */
 function NewOrderModal({ onClose, onCreate }) {
   const [cliente, setCliente] = useState("");
-  const [sla, setSla] = useState({ 1: 30, 2: 45, 3: 20, 4: 60 });
   const [busy, setBusy] = useState(false);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(20,20,20,0.45)" }}>
@@ -156,33 +155,18 @@ function NewOrderModal({ onClose, onCreate }) {
           <h3 className="text-sm font-bold" style={{ color: C.ink }}>Nuevo pedido</h3>
           <button onClick={onClose}><X size={18} color={C.inkSoft} /></button>
         </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Cliente / referencia</label>
-            <input value={cliente} onChange={(e) => setCliente(e.target.value)}
-              className="w-full text-sm px-3 py-2 rounded mt-1 outline-none" style={{ border: `1px solid ${C.line}` }}
-              placeholder="Ej: Distribuidora Andina SAS" />
-          </div>
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>
-              Tiempo límite de SLA por etapa (minutos)
-            </label>
-            <div className="grid grid-cols-2 gap-2 mt-1.5">
-              {STAGES.map((s) => (
-                <div key={s.id} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded" style={{ backgroundColor: C.paperDark }}>
-                  <span className="text-[11px]" style={{ color: C.inkSoft }}>{s.short}</span>
-                  <input type="number" min={1} value={sla[s.id]}
-                    onChange={(e) => setSla({ ...sla, [s.id]: Number(e.target.value) || 1 })}
-                    className="w-14 text-xs text-right px-1.5 py-1 rounded outline-none"
-                    style={{ border: `1px solid ${C.line}`, fontFamily: "'IBM Plex Mono', monospace" }} />
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="p-5 space-y-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: C.inkSoft }}>Cliente / referencia</label>
+          <input value={cliente} onChange={(e) => setCliente(e.target.value)}
+            className="w-full text-sm px-3 py-2 rounded outline-none" style={{ border: `1px solid ${C.line}` }}
+            placeholder="Ej: Distribuidora Andina SAS" />
+          <p className="text-[11px] pt-1" style={{ color: C.inkFaint }}>
+            El SLA de cada etapa usa la configuración global del sistema.
+          </p>
         </div>
         <div className="px-5 py-4 flex justify-end gap-2" style={{ borderTop: `1px solid ${C.line}` }}>
           <button onClick={onClose} className="px-4 py-2 rounded text-xs font-semibold" style={{ color: C.inkSoft }}>Cancelar</button>
-          <button disabled={busy} onClick={async () => { setBusy(true); await onCreate(cliente, sla); setBusy(false); }}
+          <button disabled={busy} onClick={async () => { setBusy(true); await onCreate(cliente); setBusy(false); }}
             className="px-4 py-2 rounded text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: C.steel }}>
             {busy ? "Creando..." : "Crear pedido"}
           </button>
@@ -192,12 +176,50 @@ function NewOrderModal({ onClose, onCreate }) {
   );
 }
 
+function SlaSettingsModal({ current, onClose, onSave }) {
+  const [sla, setSla] = useState(current);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(20,20,20,0.45)" }}>
+      <div className="w-full max-w-md rounded-lg" style={{ backgroundColor: C.card, border: `1px solid ${C.line}` }}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${C.line}` }}>
+          <h3 className="text-sm font-bold" style={{ color: C.ink }}>Configuración global de SLA</h3>
+          <button onClick={onClose}><X size={18} color={C.inkSoft} /></button>
+        </div>
+        <div className="p-5 space-y-3">
+          <p className="text-[11px]" style={{ color: C.inkSoft }}>
+            Estos minutos aplican a todos los pedidos del sistema. Más adelante esto vivirá en un módulo de administración con permisos propios.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {STAGES.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded" style={{ backgroundColor: C.paperDark }}>
+                <span className="text-[11px]" style={{ color: C.inkSoft }}>{s.short}</span>
+                <input type="number" min={1} value={sla[s.id]}
+                  onChange={(e) => setSla({ ...sla, [s.id]: Number(e.target.value) || 1 })}
+                  className="w-14 text-xs text-right px-1.5 py-1 rounded outline-none"
+                  style={{ border: `1px solid ${C.line}`, fontFamily: "'IBM Plex Mono', monospace" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="px-5 py-4 flex justify-end gap-2" style={{ borderTop: `1px solid ${C.line}` }}>
+          <button onClick={onClose} className="px-4 py-2 rounded text-xs font-semibold" style={{ color: C.inkSoft }}>Cancelar</button>
+          <button disabled={busy} onClick={async () => { setBusy(true); await onSave(sla); setBusy(false); }}
+            className="px-4 py-2 rounded text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: C.steel }}>
+            {busy ? "Guardando..." : "Guardar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ============ DASHBOARD ============ */
-function Dashboard({ orders, now, onOpen, onNew, email, onLogout }) {
+function Dashboard({ orders, now, slaSettings, onOpen, onNew, onOpenSettings, email, onLogout }) {
   const [query, setQuery] = useState("");
   const filtered = orders.filter((o) => (o.id + " " + o.cliente).toLowerCase().includes(query.toLowerCase()));
   const abiertos = orders.filter((o) => o.status === "abierto").length;
-  const alertas = orders.filter((o) => { const s = slaStatus(o, now); return s && (s.state === "alerta" || s.state === "excedido"); }).length;
+  const alertas = orders.filter((o) => { const s = slaStatus(o, slaSettings, now); return s && (s.state === "alerta" || s.state === "excedido"); }).length;
   const today = new Date().toDateString();
   const cerradosHoy = orders.filter((o) => {
     const st4 = o.stages[4]?.completedAt;
@@ -214,6 +236,9 @@ function Dashboard({ orders, now, onOpen, onNew, email, onLogout }) {
         <div className="flex items-center gap-2">
           <button onClick={onNew} className="flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-semibold text-white" style={{ backgroundColor: C.steel }}>
             <Plus size={14} /> Nuevo pedido
+          </button>
+          <button onClick={onOpenSettings} className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold" style={{ color: C.inkSoft, border: `1px solid ${C.line}` }}>
+            <Settings size={13} /> SLA
           </button>
           <button onClick={onLogout} className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold" style={{ color: C.inkSoft, border: `1px solid ${C.line}` }}>
             <LogOut size={13} /> Salir
@@ -249,9 +274,14 @@ function Dashboard({ orders, now, onOpen, onNew, email, onLogout }) {
       ) : (
         <div className="space-y-2">
           {filtered.slice().reverse().map((o) => {
-            const sla = slaStatus(o, now);
+            const sla = slaStatus(o, slaSettings, now);
             const stage = STAGES[o.current_stage - 1];
-            const barColor = o.status === "cerrado" ? C.ok : sla ? { ok: C.ok, alerta: C.warn, excedido: C.alert }[sla.state] : C.line;
+            const barColor = o.status === "cerrado" ? C.ok : o.status === "cancelado" ? C.alert : sla ? { ok: C.ok, alerta: C.warn, excedido: C.alert }[sla.state] : C.line;
+            const badge = o.status === "cerrado"
+              ? { bg: C.okBg, fg: C.ok, label: "Entregado" }
+              : o.status === "cancelado"
+                ? { bg: C.alertBg, fg: C.alert, label: "Cancelado" }
+                : { bg: C.steelSoft, fg: C.steel, label: "En proceso" };
             return (
               <button key={o.id} onClick={() => onOpen(o.id)}
                 className="w-full text-left flex items-center gap-4 px-4 py-3.5 rounded-lg transition hover:shadow-sm"
@@ -265,9 +295,8 @@ function Dashboard({ orders, now, onOpen, onNew, email, onLogout }) {
                   <span className="text-xs font-medium" style={{ color: C.ink }}>{stage.name}</span>
                 </div>
                 <div className="min-w-[110px]">
-                  <span className="text-[10px] font-bold uppercase px-2 py-1 rounded"
-                    style={{ backgroundColor: o.status === "cerrado" ? C.okBg : C.steelSoft, color: o.status === "cerrado" ? C.ok : C.steel }}>
-                    {o.status === "cerrado" ? "Entregado" : "En proceso"}
+                  <span className="text-[10px] font-bold uppercase px-2 py-1 rounded" style={{ backgroundColor: badge.bg, color: badge.fg }}>
+                    {badge.label}
                   </span>
                 </div>
                 <div className="min-w-[150px]">
@@ -343,6 +372,46 @@ function PdfUploader({ orderId, kind, label, onUploaded, uploadedPath }) {
   );
 }
 
+function CancelBox({ onCancel }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-[11px] font-semibold mt-4" style={{ color: C.inkFaint }}>
+        ¿No se puede continuar con este pedido? Finalizar por anomalía
+      </button>
+    );
+  }
+  return (
+    <div className="mt-4 p-3 rounded" style={{ backgroundColor: C.alertBg, border: `1px solid ${C.alert}` }}>
+      <p className="text-[11px] font-bold uppercase tracking-wide flex items-center gap-1.5 mb-2" style={{ color: C.alert }}>
+        <AlertTriangle size={13} /> Finalizar pedido por anomalía
+      </p>
+      <textarea
+        value={reason} onChange={(e) => setReason(e.target.value)}
+        placeholder="Describe el motivo (ej: cliente canceló, mercancía no disponible, error en el pedido...)"
+        className="w-full text-xs px-3 py-2 rounded outline-none" rows={2}
+        style={{ border: `1px solid ${C.line}` }}
+      />
+      <div className="flex gap-2 mt-2">
+        <button
+          disabled={!reason.trim() || busy}
+          onClick={async () => { setBusy(true); await onCancel(reason.trim()); setBusy(false); }}
+          className="px-4 py-2 rounded text-xs font-bold text-white disabled:opacity-40"
+          style={{ backgroundColor: C.alert }}
+        >
+          {busy ? "Registrando..." : "Confirmar y cerrar pedido"}
+        </button>
+        <button onClick={() => { setOpen(false); setReason(""); }} className="px-4 py-2 rounded text-xs font-semibold" style={{ color: C.inkSoft }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function StageForm({ orderId, stageId, onFinalize }) {
   const [pdfPath, setPdfPath] = useState(null);
   const [rutPath, setRutPath] = useState(null);
@@ -357,10 +426,10 @@ function StageForm({ orderId, stageId, onFinalize }) {
     return (
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <PdfUploader orderId={orderId} kind="pedido" label="PDF del pedido" uploadedPath={pdfPath} onUploaded={setPdfPath} />
-          <PdfUploader orderId={orderId} kind="rut" label="RUT" uploadedPath={rutPath} onUploaded={setRutPath} />
+          <PdfUploader orderId={orderId} kind="pedido" label="PDF del pedido *" uploadedPath={pdfPath} onUploaded={setPdfPath} />
+          <PdfUploader orderId={orderId} kind="rut" label="RUT (opcional)" uploadedPath={rutPath} onUploaded={setRutPath} />
         </div>
-        <button disabled={!pdfPath || !rutPath} onClick={() => onFinalize({ pdfPath, rutPath })}
+        <button disabled={!pdfPath} onClick={() => onFinalize({ pdfPath, rutPath: rutPath || null })}
           className="px-5 py-2.5 rounded text-xs font-bold text-white disabled:opacity-40" style={{ backgroundColor: C.steel }}>
           Finalizar etapa 1
         </button>
@@ -416,13 +485,32 @@ function StageForm({ orderId, stageId, onFinalize }) {
   );
 }
 
-function OrderDetail({ order, now, onBack, onFinalizeStage }) {
-  const sla = slaStatus(order, now);
+function OrderDetail({ order, now, slaSettings, onBack, onFinalizeStage, onCancelOrder }) {
+  const sla = slaStatus(order, slaSettings, now);
+  const statusMap = {
+    cerrado: { label: "Entregado", bg: C.okBg, fg: C.ok },
+    cancelado: { label: "Cancelado", bg: C.alertBg, fg: C.alert },
+    abierto: { label: "En proceso", bg: C.steelSoft, fg: C.steel },
+  };
+  const st = statusMap[order.status] || statusMap.abierto;
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
       <button onClick={onBack} className="flex items-center gap-1.5 text-xs font-semibold mb-4" style={{ color: C.inkSoft }}>
         <ArrowLeft size={14} /> Volver al panel
       </button>
+
+      {order.status === "cancelado" && order.cancel_info && (
+        <div className="rounded-lg p-4 mb-4 flex items-start gap-3" style={{ backgroundColor: C.alertBg, border: `1px solid ${C.alert}` }}>
+          <AlertTriangle size={18} color={C.alert} className="mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-xs font-bold" style={{ color: C.alert }}>Pedido finalizado por anomalía</p>
+            <p className="text-xs mt-1" style={{ color: C.ink }}>{order.cancel_info.reason}</p>
+            <p className="text-[11px] mt-1" style={{ color: C.inkSoft }}>
+              Registrado por {order.cancel_info.by} · {fmtShort(order.cancel_info.at)}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex rounded-lg overflow-hidden mb-6" style={{ border: `1px solid ${C.line}` }}>
         <div className="flex-1 p-5" style={{ backgroundColor: C.card }}>
@@ -433,9 +521,8 @@ function OrderDetail({ order, now, onBack, onFinalizeStage }) {
               <p className="text-xs mt-1" style={{ color: C.inkSoft }}>{order.cliente}</p>
             </div>
             <div className="text-right">
-              <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded"
-                style={{ backgroundColor: order.status === "cerrado" ? C.okBg : C.steelSoft, color: order.status === "cerrado" ? C.ok : C.steel }}>
-                {order.status === "cerrado" ? "Entregado" : "En proceso"}
+              <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded" style={{ backgroundColor: st.bg, color: st.fg }}>
+                {st.label}
               </span>
               {sla && <div className="mt-2"><StatusPill state={sla.state} /></div>}
             </div>
@@ -460,8 +547,8 @@ function OrderDetail({ order, now, onBack, onFinalizeStage }) {
 
       <div className="flex items-center mb-6">
         {STAGES.map((s, idx) => {
-          const st = order.stages[s.id] || {};
-          const done = !!st.completedAt;
+          const stg = order.stages[s.id] || {};
+          const done = !!stg.completedAt;
           const active = order.current_stage === s.id && order.status === "abierto";
           const color = done ? C.ok : active ? C.steel : C.inkFaint;
           return (
@@ -473,7 +560,7 @@ function OrderDetail({ order, now, onBack, onFinalizeStage }) {
                 </div>
                 <span className="text-[10px] font-semibold mt-1.5 text-center" style={{ color }}>{s.short}</span>
                 <span className="text-[10px]" style={{ color: C.inkFaint, fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {done ? fmtShort(st.completedAt) : active ? "en curso" : "pendiente"}
+                  {done ? fmtShort(stg.completedAt) : active ? "en curso" : "pendiente"}
                 </span>
               </div>
               {idx < STAGES.length - 1 && <div className="flex-1 h-0.5 mx-1" style={{ backgroundColor: done ? C.ok : C.line }} />}
@@ -491,6 +578,12 @@ function OrderDetail({ order, now, onBack, onFinalizeStage }) {
                 <p className="text-sm font-bold" style={{ color: C.ink }}>Pedido cerrado y entregado</p>
                 <p className="text-xs mt-1" style={{ color: C.inkSoft }}>Todas las etapas quedaron registradas en la auditoría.</p>
               </div>
+            ) : order.status === "cancelado" ? (
+              <div className="text-center py-6">
+                <AlertTriangle size={26} color={C.alert} className="mx-auto mb-2" />
+                <p className="text-sm font-bold" style={{ color: C.ink }}>Pedido finalizado por anomalía</p>
+                <p className="text-xs mt-1" style={{ color: C.inkSoft }}>Revisa el motivo registrado arriba.</p>
+              </div>
             ) : (
               <>
                 <h4 className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: C.steel }}>
@@ -498,6 +591,7 @@ function OrderDetail({ order, now, onBack, onFinalizeStage }) {
                 </h4>
                 <p className="text-xs mb-4" style={{ color: C.inkSoft }}>{STAGES[order.current_stage - 1].desc}</p>
                 <StageForm orderId={order.id} stageId={order.current_stage} onFinalize={(data) => onFinalizeStage(order.current_stage, data)} />
+                <CancelBox onCancel={onCancelOrder} />
               </>
             )}
           </div>
@@ -542,8 +636,10 @@ function OrderDetail({ order, now, onBack, onFinalizeStage }) {
 export default function App() {
   const [session, setSession] = useState(undefined);
   const [orders, setOrders] = useState([]);
+  const [slaSettings, setSlaSettings] = useState({ 1: 30, 2: 45, 3: 20, 4: 60 });
   const [selectedId, setSelectedId] = useState(null);
   const [showNewOrder, setShowNewOrder] = useState(false);
+  const [showSlaSettings, setShowSlaSettings] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -558,17 +654,29 @@ export default function App() {
     if (!error) setOrders(data || []);
   }
 
+  async function fetchSlaSettings() {
+    const { data, error } = await supabase.from("app_settings").select("sla_config").eq("id", true).single();
+    if (!error && data?.sla_config) setSlaSettings(data.sla_config);
+  }
+
   useEffect(() => {
     if (!session) return;
     fetchOrders();
+    fetchSlaSettings();
     const channel = supabase
       .channel("orders-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchOrders())
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, () => fetchSlaSettings())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [session]);
 
-  async function handleCreate(cliente, slaConfig) {
+  async function handleSaveSlaSettings(newSla) {
+    const { error } = await supabase.from("app_settings").update({ sla_config: newSla }).eq("id", true);
+    if (!error) { setSlaSettings(newSla); setShowSlaSettings(false); }
+  }
+
+  async function handleCreate(cliente) {
     const ts = nowIso();
     const id = makeOrderId(orders.length);
     const newOrder = {
@@ -578,7 +686,7 @@ export default function App() {
       created_by_email: session.user.email,
       status: "abierto",
       current_stage: 1,
-      sla_config: slaConfig,
+      sla_config: slaSettings,
       stages: {
         1: { startedAt: ts, completedAt: null, data: {} },
         2: { startedAt: null, completedAt: null, data: {} },
@@ -590,6 +698,22 @@ export default function App() {
     };
     const { error } = await supabase.from("orders").insert(newOrder);
     if (!error) { await fetchOrders(); setShowNewOrder(false); setSelectedId(id); }
+  }
+
+  async function handleCancelOrder(reason) {
+    const order = orders.find((o) => o.id === selectedId);
+    if (!order) return;
+    const ts = nowIso();
+    const cancel_info = { reason, by: session.user.email, at: ts };
+    const audit_log = [...order.audit_log, {
+      ts, user: session.user.email,
+      action: `Pedido finalizado por anomalía en etapa ${order.current_stage} (${STAGES[order.current_stage - 1].name}). Motivo: ${reason}`,
+    }];
+    const whatsapp_log = [...order.whatsapp_log, { ts, text: `Pedido ${order.id} finalizado por anomalía: ${reason}` }];
+    const { error } = await supabase.from("orders")
+      .update({ status: "cancelado", cancel_info, audit_log, whatsapp_log })
+      .eq("id", order.id);
+    if (!error) fetchOrders();
   }
 
   async function handleFinalizeStage(stageId, data) {
@@ -660,13 +784,15 @@ export default function App() {
       </header>
 
       {selected ? (
-        <OrderDetail order={selected} now={now} onBack={() => setSelectedId(null)} onFinalizeStage={handleFinalizeStage} />
+        <OrderDetail order={selected} now={now} slaSettings={slaSettings} onBack={() => setSelectedId(null)}
+          onFinalizeStage={handleFinalizeStage} onCancelOrder={handleCancelOrder} />
       ) : (
-        <Dashboard orders={orders} now={now} onOpen={setSelectedId} onNew={() => setShowNewOrder(true)}
-          email={session.user.email} onLogout={() => supabase.auth.signOut()} />
+        <Dashboard orders={orders} now={now} slaSettings={slaSettings} onOpen={setSelectedId} onNew={() => setShowNewOrder(true)}
+          onOpenSettings={() => setShowSlaSettings(true)} email={session.user.email} onLogout={() => supabase.auth.signOut()} />
       )}
 
       {showNewOrder && <NewOrderModal onClose={() => setShowNewOrder(false)} onCreate={handleCreate} />}
+      {showSlaSettings && <SlaSettingsModal current={slaSettings} onClose={() => setShowSlaSettings(false)} onSave={handleSaveSlaSettings} />}
     </div>
   );
 }
