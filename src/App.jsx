@@ -245,7 +245,7 @@ function Dashboard({ orders, now, slaSettings, onOpen, onNew, onOpenSettings, on
           <h2 className="text-lg font-bold" style={{ color: C.ink, fontFamily: "'IBM Plex Mono', monospace" }}>PANEL DE PEDIDOS</h2>
           <p className="text-xs mt-0.5" style={{ color: C.inkSoft }}>{orders.length} registrados · sesión: {email}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button onClick={onNew} className="flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-semibold text-white" style={{ backgroundColor: C.steel }}>
             <Plus size={14} /> Nuevo pedido
           </button>
@@ -265,7 +265,7 @@ function Dashboard({ orders, now, slaSettings, onOpen, onNew, onOpenSettings, on
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
         {[
           { label: "Pedidos abiertos", val: abiertos, fg: C.steel },
           { label: "Alertas activas de SLA", val: alertas, fg: alertas > 0 ? C.alert : C.ok },
@@ -303,22 +303,27 @@ function Dashboard({ orders, now, slaSettings, onOpen, onNew, onOpenSettings, on
                 : { bg: C.steelSoft, fg: C.steel, label: "En proceso" };
             return (
               <button key={o.id} onClick={() => onOpen(o.id)}
-                className="w-full text-left flex items-center gap-4 px-4 py-3.5 rounded-lg transition hover:shadow-sm"
+                className="w-full text-left flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 py-3.5 rounded-lg transition hover:shadow-sm"
                 style={{ backgroundColor: C.card, border: `1px solid ${C.line}`, borderLeft: `4px solid ${barColor}` }}>
-                <div className="min-w-[150px]">
-                  <p className="text-xs font-bold" style={{ color: C.ink, fontFamily: "'IBM Plex Mono', monospace" }}>{o.id}</p>
-                  <p className="text-[11px] mt-0.5" style={{ color: C.inkSoft }}>{o.cliente}</p>
+                <div className="flex items-start justify-between gap-2 sm:contents">
+                  <div className="sm:min-w-[150px]">
+                    <p className="text-xs font-bold" style={{ color: C.ink, fontFamily: "'IBM Plex Mono', monospace" }}>{o.id}</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: C.inkSoft }}>{o.cliente}</p>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase px-2 py-1 rounded flex-shrink-0 sm:hidden" style={{ backgroundColor: badge.bg, color: badge.fg }}>
+                    {badge.label}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5 min-w-[160px]">
+                <div className="flex items-center gap-1.5 sm:min-w-[160px]">
                   <stage.icon size={13} color={C.steel} />
                   <span className="text-xs font-medium" style={{ color: C.ink }}>{stage.name}</span>
                 </div>
-                <div className="min-w-[110px]">
+                <div className="hidden sm:block sm:min-w-[110px]">
                   <span className="text-[10px] font-bold uppercase px-2 py-1 rounded" style={{ backgroundColor: badge.bg, color: badge.fg }}>
                     {badge.label}
                   </span>
                 </div>
-                <div className="min-w-[150px]">
+                <div className="sm:min-w-[150px]">
                   {sla ? (
                     <div className="flex items-center gap-2">
                       <StatusPill state={sla.state} />
@@ -326,7 +331,7 @@ function Dashboard({ orders, now, slaSettings, onOpen, onNew, onOpenSettings, on
                     </div>
                   ) : <span className="text-[11px]" style={{ color: C.inkFaint }}>—</span>}
                 </div>
-                <div className="ml-auto text-[11px]" style={{ color: C.inkFaint }}>{fmtShort(o.created_at)}</div>
+                <div className="sm:ml-auto text-[11px]" style={{ color: C.inkFaint }}>{fmtShort(o.created_at)}</div>
               </button>
             );
           })}
@@ -564,7 +569,7 @@ function OrderDetail({ order, now, slaSettings, onBack, onFinalizeStage, onCance
         <Perforation />
       </div>
 
-      <div className="flex items-center mb-6">
+      <div className="flex items-center mb-6 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
         {STAGES.map((s, idx) => {
           const stg = order.stages[s.id] || {};
           const done = !!stg.completedAt;
