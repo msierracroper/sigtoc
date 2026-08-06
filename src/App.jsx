@@ -3,13 +3,13 @@ import {
   Package, Warehouse, Receipt, Truck, Clock, CheckCircle2, AlertTriangle,
   LogOut, Plus, Search, MessageCircle, ArrowLeft, X, FileText, CreditCard,
   MapPin, ClipboardList, Lock, Mail, Upload, FileCheck, ExternalLink, Settings,
-  BarChart3, TrendingUp, Timer, ShieldCheck,
+  BarChart3, TrendingUp, Timer, ShieldCheck, Bell, BellOff,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, AreaChart, Area, ReferenceLine,
 } from "recharts";
-import { supabase, PDF_BUCKET } from "./supabaseClient";
+import { supabase, PDF_BUCKET, VAPID_PUBLIC_KEY } from "./supabaseClient";
 
 /* ============ TOKENS DE DISEÑO ============ */
 const C = {
@@ -47,6 +47,13 @@ function makeOrderId(existingCount) {
   const year = new Date().getFullYear();
   const rand = Math.random().toString(36).slice(2, 5).toUpperCase();
   return `PED-${year}-${String(existingCount + 1).padStart(4, "0")}-${rand}`;
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
 function slaStatus(order, slaSettings, now) {
@@ -220,7 +227,7 @@ function SlaSettingsModal({ current, onClose, onSave }) {
 }
 
 /* ============ DASHBOARD ============ */
-function Dashboard({ orders, now, slaSettings, onOpen, onNew, onOpenSettings, onOpenReports, email, onLogout }) {
+function Dashboard({ orders, now, slaSettings, onOpen, onNew, onOpenSettings, onOpenReports, pushEnabled, onTogglePush, email, onLogout }) {
   const [query, setQuery] = useState("");
   const filtered = orders.filter((o) => (o.id + " " + o.cliente).toLowerCase().includes(query.toLowerCase()));
   const abiertos = orders.filter((o) => o.status === "abierto").length;
@@ -241,6 +248,10 @@ function Dashboard({ orders, now, slaSettings, onOpen, onNew, onOpenSettings, on
         <div className="flex items-center gap-2">
           <button onClick={onNew} className="flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-semibold text-white" style={{ backgroundColor: C.steel }}>
             <Plus size={14} /> Nuevo pedido
+          </button>
+          <button onClick={onTogglePush} className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold"
+            style={{ color: pushEnabled ? C.ok : C.inkSoft, border: `1px solid ${pushEnabled ? C.ok : C.line}` }}>
+            {pushEnabled ? <Bell size={13} /> : <BellOff size={13} />} {pushEnabled ? "Push activo" : "Activar push"}
           </button>
           <button onClick={onOpenReports} className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-semibold" style={{ color: C.inkSoft, border: `1px solid ${C.line}` }}>
             <BarChart3 size={13} /> Reportes
@@ -621,11 +632,11 @@ function OrderDetail({ order, now, slaSettings, onBack, onFinalizeStage, onCance
           </div>
 
           <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
-            <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: "#3E7B58" }}>
-              <MessageCircle size={15} color="#fff" />
-              <span className="text-xs font-semibold text-white">Notificaciones WhatsApp (simulado)</span>
+            <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: C.steelDark }}>
+              <Bell size={15} color="#fff" />
+              <span className="text-xs font-semibold text-white">Centro de notificaciones</span>
             </div>
-            <div className="p-3 space-y-2 max-h-52 overflow-y-auto" style={{ backgroundColor: "#EFEAE2" }}>
+            <div className="p-3 space-y-2 max-h-52 overflow-y-auto" style={{ backgroundColor: C.paperDark }}>
               {order.whatsapp_log.slice().reverse().map((w, i) => (
                 <div key={i} className="bg-white rounded-lg px-2.5 py-2 text-[11px] shadow-sm max-w-[92%] ml-auto">
                   <p style={{ color: C.ink }}>{w.text}</p>
@@ -880,14 +891,63 @@ export default function App() {
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [showSlaSettings, setShowSlaSettings] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
     const t = setInterval(() => setNow(Date.now()), 1000);
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        reg.pushManager.getSubscription().then((s) => setPushEnabled(!!s));
+      }).catch(() => {});
+    }
+
     return () => { sub.subscription.unsubscribe(); clearInterval(t); };
   }, []);
+
+  // Deep link: si la notificación push trae ?order=ID, abre ese pedido directo.
+  useEffect(() => {
+    if (!session || orders.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get("order");
+    if (orderId && orders.some((o) => o.id === orderId)) {
+      setSelectedId(orderId);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [session, orders]);
+
+  async function togglePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      alert("Este navegador no soporta notificaciones push. Instala SIGTOC desde Chrome/Android o Safari 16.4+ en iOS.");
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+
+    if (pushEnabled && existing) {
+      await supabase.from("push_subscriptions").delete().eq("endpoint", existing.endpoint);
+      await existing.unsubscribe();
+      setPushEnabled(false);
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") { alert("Necesitas aceptar el permiso de notificaciones para activarlas."); return; }
+
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+
+    await supabase.from("push_subscriptions").upsert(
+      { user_id: session.user.id, endpoint: subscription.endpoint, subscription: subscription.toJSON() },
+      { onConflict: "endpoint" }
+    );
+    setPushEnabled(true);
+  }
 
   async function fetchOrders() {
     const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: true });
@@ -1031,6 +1091,7 @@ export default function App() {
       ) : (
         <Dashboard orders={orders} now={now} slaSettings={slaSettings} onOpen={setSelectedId} onNew={() => setShowNewOrder(true)}
           onOpenSettings={() => setShowSlaSettings(true)} onOpenReports={() => setShowReports(true)}
+          pushEnabled={pushEnabled} onTogglePush={togglePush}
           email={session.user.email} onLogout={() => supabase.auth.signOut()} />
       )}
 

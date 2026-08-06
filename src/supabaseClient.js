@@ -12,3 +12,6 @@ const SUPABASE_ANON_KEY =
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const PDF_BUCKET = "pedido-pdfs";
+
+export const VAPID_PUBLIC_KEY =
+  "BLXxMMSqlCgnRSMYgAgIJeaG4tgNkKcXZXRWmfILCb8Zogf9wyWYBZJjofvoM09QzOmRoLr98MeXBe2cZmCTzUY";
