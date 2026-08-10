@@ -509,7 +509,127 @@ function StageForm({ orderId, stageId, onFinalize }) {
   );
 }
 
-function OrderDetail({ order, now, slaSettings, onBack, onFinalizeStage, onCancelOrder }) {
+function StageDataView({ stageId, data }) {
+  if (!data) return <p className="text-xs" style={{ color: C.inkFaint }}>Sin datos.</p>;
+  if (stageId === 1) {
+    return (
+      <div className="space-y-1.5 text-xs">
+        <p><span style={{ color: C.inkSoft }}>PDF del pedido: </span><span style={{ color: C.ink }}>{data.pdfPath ? "Cargado" : "—"}</span></p>
+        <p><span style={{ color: C.inkSoft }}>RUT: </span><span style={{ color: C.ink }}>{data.rutPath ? "Cargado" : "No adjuntado"}</span></p>
+      </div>
+    );
+  }
+  if (stageId === 2) return <p className="text-xs"><span style={{ color: C.inkSoft }}>Seriales: </span><span style={{ color: C.ink }}>{data.seriales || "—"}</span></p>;
+  if (stageId === 3) return <p className="text-xs"><span style={{ color: C.inkSoft }}>Factura: </span><span style={{ color: C.ink }}>{data.factura || "—"}</span></p>;
+  return <p className="text-xs"><span style={{ color: C.inkSoft }}>Modo de entrega: </span><span style={{ color: C.ink }}>{data.modo === "tienda" ? "Entrega en tienda" : "Envío con guía"}</span></p>;
+}
+
+function StageEditForm({ orderId, stageId, data, onSave, onCancel }) {
+  const [pdfPath, setPdfPath] = useState(data?.pdfPath || null);
+  const [rutPath, setRutPath] = useState(data?.rutPath || null);
+  const [seriales, setSeriales] = useState(data?.seriales || "");
+  const [factura, setFactura] = useState(data?.factura || "");
+  const [modo, setModo] = useState(data?.modo || "guia");
+  const inputStyle = { border: `1px solid ${C.line}` };
+
+  function save() {
+    if (stageId === 1) onSave({ pdfPath, rutPath });
+    else if (stageId === 2) onSave({ seriales });
+    else if (stageId === 3) onSave({ factura });
+    else onSave({ modo });
+  }
+
+  return (
+    <div className="space-y-3">
+      {stageId === 1 && (
+        <div className="grid grid-cols-2 gap-3">
+          <PdfUploader orderId={orderId} kind="pedido" label="PDF del pedido" uploadedPath={pdfPath} onUploaded={setPdfPath} />
+          <PdfUploader orderId={orderId} kind="rut" label="RUT (opcional)" uploadedPath={rutPath} onUploaded={setRutPath} />
+        </div>
+      )}
+      {stageId === 2 && (
+        <input value={seriales} onChange={(e) => setSeriales(e.target.value)} placeholder="Seriales"
+          className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
+      )}
+      {stageId === 3 && (
+        <input value={factura} onChange={(e) => setFactura(e.target.value)} placeholder="Número de factura"
+          className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
+      )}
+      {stageId === 4 && (
+        <div className="grid grid-cols-2 gap-2">
+          <label onClick={() => setModo("guia")} className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-xs"
+            style={{ backgroundColor: modo === "guia" ? C.steelSoft : C.paperDark }}>Envío con guía</label>
+          <label onClick={() => setModo("tienda")} className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-xs"
+            style={{ backgroundColor: modo === "tienda" ? C.steelSoft : C.paperDark }}>Entrega en tienda</label>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <button onClick={save} className="px-4 py-2 rounded text-xs font-bold text-white" style={{ backgroundColor: C.steel }}>Guardar nueva versión</button>
+        <button onClick={onCancel} className="px-4 py-2 rounded text-xs font-semibold" style={{ color: C.inkSoft }}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+function StageHistoryModal({ orderId, stage, stageData, onClose, onSaveEdit }) {
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const history = stageData.editHistory || [];
+  const version = history.length + 1;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(20,20,20,0.45)" }}>
+      <div className="w-full max-w-lg rounded-lg max-h-[85vh] overflow-y-auto" style={{ backgroundColor: C.card, border: `1px solid ${C.line}` }}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${C.line}` }}>
+          <div>
+            <h3 className="text-sm font-bold" style={{ color: C.ink }}>Etapa {stage.id} · {stage.name}</h3>
+            <p className="text-[11px] mt-0.5" style={{ color: C.inkFaint }}>
+              Completada {fmtShort(stageData.completedAt)} · versión actual: v{version}
+            </p>
+          </div>
+          <button onClick={onClose}><X size={18} color={C.inkSoft} /></button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {editing ? (
+            <StageEditForm orderId={orderId} stageId={stage.id} data={stageData.data}
+              onSave={async (newData) => { setBusy(true); await onSaveEdit(newData); setBusy(false); setEditing(false); }}
+              onCancel={() => setEditing(false)} />
+          ) : (
+            <>
+              <div className="p-3 rounded" style={{ backgroundColor: C.paperDark }}>
+                <p className="text-[10px] font-bold uppercase mb-1.5" style={{ color: C.inkSoft }}>Datos actuales (v{version})</p>
+                <StageDataView stageId={stage.id} data={stageData.data} />
+              </div>
+              <button onClick={() => setEditing(true)} className="px-4 py-2 rounded text-xs font-bold text-white" style={{ backgroundColor: C.steel }}>
+                Editar y crear nueva versión
+              </button>
+            </>
+          )}
+
+          {history.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold uppercase mb-2" style={{ color: C.inkSoft }}>Historial de versiones anteriores</p>
+              <div className="space-y-2">
+                {history.slice().reverse().map((h) => (
+                  <div key={h.version} className="p-2.5 rounded" style={{ backgroundColor: C.paperDark, border: `1px solid ${C.line}` }}>
+                    <p className="text-[10px] font-semibold mb-1" style={{ color: C.inkFaint }}>
+                      v{h.version} · reemplazada por {h.editedBy} el {fmtShort(h.editedAt)}
+                    </p>
+                    <StageDataView stageId={stage.id} data={h.data} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrderDetail({ order, now, slaSettings, onBack, onFinalizeStage, onCancelOrder, onEditStage }) {
+  const [viewingStage, setViewingStage] = useState(null);
   const sla = slaStatus(order, slaSettings, now);
   const statusMap = {
     cerrado: { label: "Entregado", bg: C.okBg, fg: C.ok },
@@ -575,16 +695,24 @@ function OrderDetail({ order, now, slaSettings, onBack, onFinalizeStage, onCance
           const done = !!stg.completedAt;
           const active = order.current_stage === s.id && order.status === "abierto";
           const color = done ? C.ok : active ? C.steel : C.inkFaint;
+          const versionCount = (stg.editHistory?.length || 0) + 1;
           return (
             <React.Fragment key={s.id}>
               <div className="flex flex-col items-center" style={{ minWidth: 90 }}>
-                <div className="w-9 h-9 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: done ? C.okBg : active ? C.steelSoft : C.paperDark, border: `2px solid ${color}` }}>
+                <button
+                  onClick={() => done && setViewingStage(s)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center relative"
+                  style={{ backgroundColor: done ? C.okBg : active ? C.steelSoft : C.paperDark, border: `2px solid ${color}`, cursor: done ? "pointer" : "default" }}
+                >
                   {done ? <CheckCircle2 size={16} color={color} /> : <s.icon size={15} color={color} />}
-                </div>
+                  {done && versionCount > 1 && (
+                    <span className="absolute -top-1.5 -right-1.5 text-[8px] font-bold text-white rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: C.steel, width: 15, height: 15 }}>v{versionCount}</span>
+                  )}
+                </button>
                 <span className="text-[10px] font-semibold mt-1.5 text-center" style={{ color }}>{s.short}</span>
-                <span className="text-[10px]" style={{ color: C.inkFaint, fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {done ? fmtShort(stg.completedAt) : active ? "en curso" : "pendiente"}
+                <span className="text-[10px]" style={{ color: done ? C.steel : C.inkFaint, fontFamily: "'IBM Plex Mono', monospace", textDecoration: done ? "underline" : "none" }}>
+                  {done ? "ver detalle" : active ? "en curso" : "pendiente"}
                 </span>
               </div>
               {idx < STAGES.length - 1 && <div className="flex-1 h-0.5 mx-1" style={{ backgroundColor: done ? C.ok : C.line }} />}
@@ -652,6 +780,16 @@ function OrderDetail({ order, now, slaSettings, onBack, onFinalizeStage, onCance
           </div>
         </div>
       </div>
+
+      {viewingStage && (
+        <StageHistoryModal
+          orderId={order.id}
+          stage={viewingStage}
+          stageData={order.stages[viewingStage.id]}
+          onClose={() => setViewingStage(null)}
+          onSaveEdit={(newData) => onEditStage(viewingStage.id, newData)}
+        />
+      )}
     </div>
   );
 }
@@ -1083,6 +1221,25 @@ export default function App() {
     if (!error) fetchOrders();
   }
 
+  async function handleEditStage(stageId, newData) {
+    const order = orders.find((o) => o.id === selectedId);
+    if (!order) return;
+    const ts = nowIso();
+    const currentStage = order.stages[stageId];
+    const editHistory = [
+      ...(currentStage.editHistory || []),
+      { data: currentStage.data, editedAt: ts, editedBy: session.user.email, version: (currentStage.editHistory?.length || 0) + 1 },
+    ];
+    const stages = { ...order.stages, [stageId]: { ...currentStage, data: newData, editHistory } };
+    const newVersion = editHistory.length + 1;
+    const audit_log = [...order.audit_log, {
+      ts, user: session.user.email,
+      action: `Etapa ${stageId} (${STAGES[stageId - 1].name}) editada. Ahora en versión v${newVersion}.`,
+    }];
+    const { error } = await supabase.from("orders").update({ stages, audit_log }).eq("id", order.id);
+    if (!error) fetchOrders();
+  }
+
   async function handleFinalizeStage(stageId, data) {
     const order = orders.find((o) => o.id === selectedId);
     if (!order) return;
@@ -1157,7 +1314,7 @@ export default function App() {
         <ReportsView orders={orders} slaSettings={slaSettings} onBack={() => setShowReports(false)} />
       ) : selected ? (
         <OrderDetail order={selected} now={now} slaSettings={slaSettings} onBack={() => setSelectedId(null)}
-          onFinalizeStage={handleFinalizeStage} onCancelOrder={handleCancelOrder} />
+          onFinalizeStage={handleFinalizeStage} onCancelOrder={handleCancelOrder} onEditStage={handleEditStage} />
       ) : (
         <Dashboard orders={orders} now={now} slaSettings={slaSettings} onOpen={setSelectedId} onNew={() => setShowNewOrder(true)}
           onOpenSettings={() => setShowSlaSettings(true)} onOpenReports={() => setShowReports(true)}
