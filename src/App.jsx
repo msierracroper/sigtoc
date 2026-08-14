@@ -436,15 +436,43 @@ function CancelBox({ onCancel }) {
   );
 }
 
+function SerialListEditor({ list, setList, disabled }) {
+  function update(i, val) { const next = [...list]; next[i] = val; setList(next); }
+  function add() { setList([...list, ""]); }
+  function remove(i) { setList(list.filter((_, idx) => idx !== i)); }
+  return (
+    <div className="space-y-2">
+      {list.map((s, i) => (
+        <div key={i} className="flex gap-2">
+          <input value={s} disabled={disabled} onChange={(e) => update(i, e.target.value)}
+            placeholder={`Serial ${i + 1} (ej: SN-998342)`}
+            className="flex-1 text-xs px-3 py-2.5 rounded outline-none disabled:opacity-50" style={{ border: `1px solid ${C.line}` }} />
+          {list.length > 1 && !disabled && (
+            <button onClick={() => remove(i)} className="px-2.5 rounded" style={{ border: `1px solid ${C.line}`, color: C.inkFaint }}>
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      ))}
+      {!disabled && (
+        <button onClick={add} className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: C.steel }}>
+          <Plus size={12} /> Agregar otro serial
+        </button>
+      )}
+    </div>
+  );
+}
+
 function StageForm({ orderId, stageId, onFinalize }) {
   const [pdfPath, setPdfPath] = useState(null);
   const [rutPath, setRutPath] = useState(null);
-  const [seriales, setSeriales] = useState("");
+  const [serialesList, setSerialesList] = useState([""]);
   const [sinSerial, setSinSerial] = useState(false);
   const [factura, setFactura] = useState("");
   const [modoEntrega, setModoEntrega] = useState("guia");
   const [guia, setGuia] = useState(false);
   const inputStyle = { border: `1px solid ${C.line}` };
+  const hasSerial = serialesList.some((s) => s.trim());
 
   if (stageId === 1) {
     return (
@@ -463,13 +491,16 @@ function StageForm({ orderId, stageId, onFinalize }) {
   if (stageId === 2) {
     return (
       <div className="space-y-3">
-        <input value={seriales} disabled={sinSerial} onChange={(e) => setSeriales(e.target.value)}
-          placeholder="Ej: SN-998342, SN-998343" className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
+        <SerialListEditor list={serialesList} setList={setSerialesList} disabled={sinSerial} />
         <label className="flex items-center gap-2 text-xs" style={{ color: C.inkSoft }}>
-          <input type="checkbox" checked={sinSerial} onChange={(e) => { setSinSerial(e.target.checked); if (e.target.checked) setSeriales(""); }} />
+          <input type="checkbox" checked={sinSerial} onChange={(e) => setSinSerial(e.target.checked)} />
           Opción sin serial
         </label>
-        <button disabled={!seriales && !sinSerial} onClick={() => onFinalize({ seriales: sinSerial ? "Sin serial" : seriales })}
+        <button disabled={!hasSerial && !sinSerial}
+          onClick={() => {
+            const clean = serialesList.map((s) => s.trim()).filter(Boolean);
+            onFinalize({ serialesList: sinSerial ? [] : clean, seriales: sinSerial ? "Sin serial" : clean.join(", ") });
+          }}
           className="px-5 py-2.5 rounded text-xs font-bold text-white disabled:opacity-40" style={{ backgroundColor: C.steel }}>
           Finalizar etapa 2
         </button>
@@ -536,7 +567,23 @@ function StageDataView({ stageId, data }) {
       </div>
     );
   }
-  if (stageId === 2) return <p className="text-xs"><span style={{ color: C.inkSoft }}>Seriales: </span><span style={{ color: C.ink }}>{data.seriales || "—"}</span></p>;
+  if (stageId === 2) {
+    const list = data.serialesList?.length ? data.serialesList : (data.seriales && data.seriales !== "Sin serial" ? data.seriales.split(",").map((s) => s.trim()).filter(Boolean) : []);
+    return (
+      <div className="text-xs">
+        <p style={{ color: C.inkSoft }} className="mb-1.5">Seriales{list.length > 1 ? ` (${list.length})` : ""}:</p>
+        {list.length === 0 ? (
+          <span style={{ color: C.ink }}>{data.seriales || "—"}</span>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {list.map((s, i) => (
+              <span key={i} className="px-2 py-1 rounded font-medium" style={{ backgroundColor: C.paperDark, color: C.ink, fontFamily: "'IBM Plex Mono', monospace" }}>{s}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
   if (stageId === 3) return <p className="text-xs"><span style={{ color: C.inkSoft }}>Factura: </span><span style={{ color: C.ink }}>{data.factura || "—"}</span></p>;
   return <p className="text-xs"><span style={{ color: C.inkSoft }}>Modo de entrega: </span><span style={{ color: C.ink }}>{data.modo === "tienda" ? "Entrega en tienda" : "Envío con guía"}</span></p>;
 }
@@ -544,14 +591,19 @@ function StageDataView({ stageId, data }) {
 function StageEditForm({ orderId, stageId, data, onSave, onCancel }) {
   const [pdfPath, setPdfPath] = useState(data?.pdfPath || null);
   const [rutPath, setRutPath] = useState(data?.rutPath || null);
-  const [seriales, setSeriales] = useState(data?.seriales || "");
+  const [serialesList, setSerialesList] = useState(
+    data?.serialesList?.length ? data.serialesList : (data?.seriales && data.seriales !== "Sin serial" ? data.seriales.split(",").map((s) => s.trim()).filter(Boolean) : [""])
+  );
   const [factura, setFactura] = useState(data?.factura || "");
   const [modo, setModo] = useState(data?.modo || "guia");
   const inputStyle = { border: `1px solid ${C.line}` };
 
   function save() {
     if (stageId === 1) onSave({ pdfPath, rutPath });
-    else if (stageId === 2) onSave({ seriales });
+    else if (stageId === 2) {
+      const clean = serialesList.map((s) => s.trim()).filter(Boolean);
+      onSave({ serialesList: clean, seriales: clean.length ? clean.join(", ") : "Sin serial" });
+    }
     else if (stageId === 3) onSave({ factura });
     else onSave({ modo });
   }
@@ -564,10 +616,7 @@ function StageEditForm({ orderId, stageId, data, onSave, onCancel }) {
           <PdfUploader orderId={orderId} kind="rut" label="RUT (opcional)" uploadedPath={rutPath} onUploaded={setRutPath} />
         </div>
       )}
-      {stageId === 2 && (
-        <input value={seriales} onChange={(e) => setSeriales(e.target.value)} placeholder="Seriales"
-          className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
-      )}
+      {stageId === 2 && <SerialListEditor list={serialesList} setList={setSerialesList} disabled={false} />}
       {stageId === 3 && (
         <input value={factura} onChange={(e) => setFactura(e.target.value)} placeholder="Número de factura"
           className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
