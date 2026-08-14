@@ -437,15 +437,37 @@ function CancelBox({ onCancel }) {
 }
 
 function SerialListEditor({ list, setList, disabled }) {
+  const inputRefs = React.useRef([]);
+  const pendingFocus = React.useRef(null);
+
+  React.useEffect(() => {
+    if (pendingFocus.current !== null && inputRefs.current[pendingFocus.current]) {
+      inputRefs.current[pendingFocus.current].focus();
+      pendingFocus.current = null;
+    }
+  }, [list.length]);
+
   function update(i, val) { const next = [...list]; next[i] = val; setList(next); }
-  function add() { setList([...list, ""]); }
+  function add(focusIndex) { pendingFocus.current = focusIndex ?? list.length; setList([...list, ""]); }
   function remove(i) { setList(list.filter((_, idx) => idx !== i)); }
+
+  function handleKeyDown(e, i) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (!list[i]?.trim()) return; // lector de barras: no avanzar con campo vacío
+    if (i === list.length - 1) add(); // último campo -> crea uno nuevo y lo enfoca (listo para el siguiente escaneo)
+    else inputRefs.current[i + 1]?.focus(); // ya hay un campo siguiente -> solo salta a él
+  }
+
   return (
     <div className="space-y-2">
       {list.map((s, i) => (
         <div key={i} className="flex gap-2">
-          <input value={s} disabled={disabled} onChange={(e) => update(i, e.target.value)}
-            placeholder={`Serial ${i + 1} (ej: SN-998342)`}
+          <input
+            ref={(el) => (inputRefs.current[i] = el)}
+            value={s} disabled={disabled} onChange={(e) => update(i, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(e, i)}
+            placeholder={`Serial ${i + 1} — escanea o escribe`}
             className="flex-1 text-xs px-3 py-2.5 rounded outline-none disabled:opacity-50" style={{ border: `1px solid ${C.line}` }} />
           {list.length > 1 && !disabled && (
             <button onClick={() => remove(i)} className="px-2.5 rounded" style={{ border: `1px solid ${C.line}`, color: C.inkFaint }}>
@@ -455,9 +477,14 @@ function SerialListEditor({ list, setList, disabled }) {
         </div>
       ))}
       {!disabled && (
-        <button onClick={add} className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: C.steel }}>
+        <button onClick={() => add()} className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: C.steel }}>
           <Plus size={12} /> Agregar otro serial
         </button>
+      )}
+      {!disabled && (
+        <p className="text-[10px]" style={{ color: C.inkFaint }}>
+          Tip: con lector de código de barras, escanea y presiona Enter — salta solo al siguiente campo.
+        </p>
       )}
     </div>
   );
@@ -575,9 +602,9 @@ function StageDataView({ stageId, data }) {
         {list.length === 0 ? (
           <span style={{ color: C.ink }}>{data.seriales || "—"}</span>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-col gap-1.5">
             {list.map((s, i) => (
-              <span key={i} className="px-2 py-1 rounded font-medium" style={{ backgroundColor: C.paperDark, color: C.ink, fontFamily: "'IBM Plex Mono', monospace" }}>{s}</span>
+              <span key={i} className="px-2.5 py-1.5 rounded font-medium" style={{ backgroundColor: C.paperDark, color: C.ink, fontFamily: "'IBM Plex Mono', monospace" }}>{s}</span>
             ))}
           </div>
         )}
@@ -1124,7 +1151,7 @@ function AlertBell({ orders, slaSettings, now, onOpenOrder }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-w-[90vw] rounded-lg overflow-hidden z-50 shadow-lg"
+        <div className="fixed left-2 right-2 top-14 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:max-w-[90vw] max-h-[75vh] rounded-lg overflow-hidden z-50 shadow-lg"
           style={{ backgroundColor: C.card, border: `1px solid ${C.line}` }}>
           <div className="px-3.5 py-2.5" style={{ borderBottom: `1px solid ${C.line}` }}>
             <p className="text-xs font-bold" style={{ color: C.ink }}>
