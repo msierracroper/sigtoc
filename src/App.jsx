@@ -509,13 +509,30 @@ function StageForm({ orderId, stageId, onFinalize }) {
   );
 }
 
+function DocLink({ label, path }) {
+  async function view() {
+    const { data } = await supabase.storage.from(PDF_BUCKET).createSignedUrl(path, 60);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  }
+  return (
+    <p className="flex items-center justify-between gap-2">
+      <span><span style={{ color: C.inkSoft }}>{label}: </span><span style={{ color: C.ink }}>{path ? "Cargado" : label === "RUT" ? "No adjuntado" : "—"}</span></span>
+      {path && (
+        <button onClick={view} className="flex items-center gap-1 text-[11px] font-semibold flex-shrink-0" style={{ color: C.steel }}>
+          Ver <ExternalLink size={11} />
+        </button>
+      )}
+    </p>
+  );
+}
+
 function StageDataView({ stageId, data }) {
   if (!data) return <p className="text-xs" style={{ color: C.inkFaint }}>Sin datos.</p>;
   if (stageId === 1) {
     return (
-      <div className="space-y-1.5 text-xs">
-        <p><span style={{ color: C.inkSoft }}>PDF del pedido: </span><span style={{ color: C.ink }}>{data.pdfPath ? "Cargado" : "—"}</span></p>
-        <p><span style={{ color: C.inkSoft }}>RUT: </span><span style={{ color: C.ink }}>{data.rutPath ? "Cargado" : "No adjuntado"}</span></p>
+      <div className="space-y-2 text-xs">
+        <DocLink label="PDF del pedido" path={data.pdfPath} />
+        <DocLink label="RUT" path={data.rutPath} />
       </div>
     );
   }
