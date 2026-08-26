@@ -396,6 +396,54 @@ function PdfUploader({ orderId, kind, label, onUploaded, uploadedPath }) {
   );
 }
 
+function GuideUploader({ orderId, label, onUploaded, uploadedPath }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true); setError("");
+    const ext = (file.name.split(".").pop() || "pdf").toLowerCase().replace(/[^a-z0-9]/g, "") || "pdf";
+    const path = `${orderId}/guia-${Date.now()}.${ext}`;
+    const { error: err } = await supabase.storage.from(PDF_BUCKET).upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
+    setBusy(false);
+    if (err) { setError("No se pudo subir el archivo."); return; }
+    onUploaded(path);
+  }
+
+  async function viewFile() {
+    const { data } = await supabase.storage.from(PDF_BUCKET).createSignedUrl(uploadedPath, 60);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  }
+
+  return (
+    <div className="px-3 py-3 rounded" style={{ backgroundColor: C.paperDark }}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {uploadedPath ? <FileCheck size={14} color={C.ok} /> : <Upload size={14} color={C.steel} />}
+          <span className="text-xs font-medium">{label}</span>
+        </div>
+        {uploadedPath && (
+          <div className="flex items-center gap-2">
+            <button onClick={viewFile} className="flex items-center gap-1 text-[11px] font-semibold" style={{ color: C.steel }}>
+              Ver <ExternalLink size={11} />
+            </button>
+            <button onClick={() => onUploaded(null)} className="text-[11px]" style={{ color: C.inkFaint }}>Quitar</button>
+          </div>
+        )}
+      </div>
+      {!uploadedPath && (
+        <label className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold cursor-pointer" style={{ color: C.steel }}>
+          <input type="file" accept="application/pdf,image/*" className="hidden" onChange={handleFile} disabled={busy} />
+          {busy ? "Subiendo..." : "Elegir foto o PDF de la guía"}
+        </label>
+      )}
+      {error && <p className="text-[10px] mt-1" style={{ color: C.alert }}>{error}</p>}
+    </div>
+  );
+}
+
 function CancelBox({ onCancel }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -497,7 +545,8 @@ function StageForm({ orderId, stageId, onFinalize }) {
   const [sinSerial, setSinSerial] = useState(false);
   const [factura, setFactura] = useState("");
   const [modoEntrega, setModoEntrega] = useState("guia");
-  const [guia, setGuia] = useState(false);
+  const [guiaNumero, setGuiaNumero] = useState("");
+  const [guiaFilePath, setGuiaFilePath] = useState(null);
   const inputStyle = { border: `1px solid ${C.line}` };
   const hasSerial = serialesList.some((s) => s.trim());
 
@@ -551,7 +600,6 @@ function StageForm({ orderId, stageId, onFinalize }) {
       <div className="grid grid-cols-2 gap-3">
         <label onClick={() => setModoEntrega("guia")} className="flex items-center gap-2 px-3 py-3 rounded cursor-pointer"
           style={{ backgroundColor: modoEntrega === "guia" ? C.steelSoft : C.paperDark, border: modoEntrega === "guia" ? `1px solid ${C.steel}` : "1px solid transparent" }}>
-          <input type="checkbox" checked={guia} onChange={(e) => setGuia(e.target.checked)} disabled={modoEntrega !== "guia"} />
           <Truck size={14} color={C.steel} /><span className="text-xs font-medium">Envío con guía</span>
         </label>
         <label onClick={() => setModoEntrega("tienda")} className="flex items-center gap-2 px-3 py-3 rounded cursor-pointer"
@@ -559,7 +607,16 @@ function StageForm({ orderId, stageId, onFinalize }) {
           <MapPin size={14} color={C.steel} /><span className="text-xs font-medium">Entrega en tienda</span>
         </label>
       </div>
-      <button disabled={modoEntrega === "guia" && !guia} onClick={() => onFinalize({ modo: modoEntrega })}
+      {modoEntrega === "guia" && (
+        <div className="space-y-2">
+          <input value={guiaNumero} onChange={(e) => setGuiaNumero(e.target.value)} placeholder="Número de guía (opcional si subes el archivo)"
+            className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
+          <GuideUploader orderId={orderId} label="Foto o PDF de la guía (opcional si escribes el número)" uploadedPath={guiaFilePath} onUploaded={setGuiaFilePath} />
+        </div>
+      )}
+      <button
+        disabled={modoEntrega === "guia" && !guiaNumero.trim() && !guiaFilePath}
+        onClick={() => onFinalize({ modo: modoEntrega, guiaNumero: guiaNumero.trim() || null, guiaFilePath })}
         className="px-5 py-2.5 rounded text-xs font-bold text-white disabled:opacity-40" style={{ backgroundColor: C.ok }}>
         Pedido finalizado
       </button>
@@ -612,7 +669,17 @@ function StageDataView({ stageId, data }) {
     );
   }
   if (stageId === 3) return <p className="text-xs"><span style={{ color: C.inkSoft }}>Factura: </span><span style={{ color: C.ink }}>{data.factura || "—"}</span></p>;
-  return <p className="text-xs"><span style={{ color: C.inkSoft }}>Modo de entrega: </span><span style={{ color: C.ink }}>{data.modo === "tienda" ? "Entrega en tienda" : "Envío con guía"}</span></p>;
+  return (
+    <div className="space-y-1.5 text-xs">
+      <p><span style={{ color: C.inkSoft }}>Modo de entrega: </span><span style={{ color: C.ink }}>{data.modo === "tienda" ? "Entrega en tienda" : "Envío con guía"}</span></p>
+      {data.modo !== "tienda" && (
+        <>
+          <p><span style={{ color: C.inkSoft }}>Número de guía: </span><span style={{ color: C.ink }}>{data.guiaNumero || "—"}</span></p>
+          <DocLink label="Archivo de guía" path={data.guiaFilePath} />
+        </>
+      )}
+    </div>
+  );
 }
 
 function StageEditForm({ orderId, stageId, data, onSave, onCancel }) {
@@ -623,6 +690,8 @@ function StageEditForm({ orderId, stageId, data, onSave, onCancel }) {
   );
   const [factura, setFactura] = useState(data?.factura || "");
   const [modo, setModo] = useState(data?.modo || "guia");
+  const [guiaNumero, setGuiaNumero] = useState(data?.guiaNumero || "");
+  const [guiaFilePath, setGuiaFilePath] = useState(data?.guiaFilePath || null);
   const inputStyle = { border: `1px solid ${C.line}` };
 
   function save() {
@@ -632,7 +701,7 @@ function StageEditForm({ orderId, stageId, data, onSave, onCancel }) {
       onSave({ serialesList: clean, seriales: clean.length ? clean.join(", ") : "Sin serial" });
     }
     else if (stageId === 3) onSave({ factura });
-    else onSave({ modo });
+    else onSave({ modo, guiaNumero: guiaNumero.trim() || null, guiaFilePath });
   }
 
   return (
@@ -649,11 +718,20 @@ function StageEditForm({ orderId, stageId, data, onSave, onCancel }) {
           className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
       )}
       {stageId === 4 && (
-        <div className="grid grid-cols-2 gap-2">
-          <label onClick={() => setModo("guia")} className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-xs"
-            style={{ backgroundColor: modo === "guia" ? C.steelSoft : C.paperDark }}>Envío con guía</label>
-          <label onClick={() => setModo("tienda")} className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-xs"
-            style={{ backgroundColor: modo === "tienda" ? C.steelSoft : C.paperDark }}>Entrega en tienda</label>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <label onClick={() => setModo("guia")} className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-xs"
+              style={{ backgroundColor: modo === "guia" ? C.steelSoft : C.paperDark }}>Envío con guía</label>
+            <label onClick={() => setModo("tienda")} className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-xs"
+              style={{ backgroundColor: modo === "tienda" ? C.steelSoft : C.paperDark }}>Entrega en tienda</label>
+          </div>
+          {modo === "guia" && (
+            <>
+              <input value={guiaNumero} onChange={(e) => setGuiaNumero(e.target.value)} placeholder="Número de guía (opcional si subes el archivo)"
+                className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
+              <GuideUploader orderId={orderId} label="Foto o PDF de la guía (opcional si escribes el número)" uploadedPath={guiaFilePath} onUploaded={setGuiaFilePath} />
+            </>
+          )}
         </div>
       )}
       <div className="flex gap-2">
