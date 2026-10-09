@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ClipboardList, Lock, Mail } from "lucide-react";
+import { ClipboardList, Lock, Mail, Eye, EyeOff } from "lucide-react";
 import { C, FONT_MONO } from "../../styles/tokens";
 import { signIn, signUp } from "../../services/auth";
 
@@ -8,6 +8,7 @@ export default function LoginScreen({ onAuthed }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,8 +56,15 @@ export default function LoginScreen({ onAuthed }) {
             <label className="text-[11px] font-semibold uppercase tracking-wide flex items-center gap-1.5 mb-1.5" style={{ color: C.inkSoft }}>
               <Lock size={12} /> Contraseña
             </label>
-            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password"
-              className="w-full text-sm px-3 py-2 rounded outline-none" style={{ border: `1px solid ${C.line}` }} placeholder="Mínimo 6 caracteres" />
+            <div className="relative">
+              <input value={password} onChange={(e) => setPassword(e.target.value)} type={showPassword ? "text" : "password"}
+                className="w-full text-sm pl-3 pr-10 py-2 rounded outline-none" style={{ border: `1px solid ${C.line}` }} placeholder="Mínimo 6 caracteres" />
+              <button type="button" onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                className="absolute right-0 top-0 h-full px-3 flex items-center" style={{ color: C.inkSoft }}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
           {error && <p className="text-xs font-medium" style={{ color: C.alert }}>{error}</p>}
           {info && <p className="text-xs font-medium" style={{ color: C.ok }}>{info}</p>}
