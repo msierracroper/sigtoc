@@ -4,6 +4,7 @@ import { STAGES } from "../../constants/stages";
 import { fmtShort, fmtMinutes, shortUser } from "../../utils/format";
 import { slaStatus } from "../../utils/sla";
 import { OrderStatusBadge } from "../ui/Badge";
+import Button from "../ui/Button";
 import Banner from "../ui/Banner";
 import { SlaMeter } from "../ui/Meter";
 import CancelBox from "./CancelBox";
@@ -32,7 +33,9 @@ function Stepper({ order, sla, onView }) {
                 {done && versions > 1 && <span className="absolute -top-1.5 -right-2 h-4 px-1 rounded-full bg-ink text-white text-[10px] font-semibold grid place-items-center">v{versions}</span>}
               </span>
               <span className={`text-[12.5px] font-semibold leading-tight ${done || active ? "text-ink" : "text-ink3"}`}>{s.short}</span>
-              <span className={`text-[11.5px] leading-tight ${done ? "text-link" : "text-ink3"}`}>{done ? "Ver detalle" : active ? "En curso" : "Pendiente"}</span>
+              {done
+                ? <span className="mt-0.5 h-7 sm:h-6 px-2 rounded-md inline-flex items-center text-[12px] sm:text-[11.5px] font-semibold text-ink bg-surface shadow-[inset_0_0_0_1px_#E3E3E3,0_1px_0_rgba(0,0,0,.05)]">Ver detalle</span>
+                : <span className="text-[11.5px] leading-tight text-ink3">{active ? "En curso" : "Pendiente"}</span>}
             </button>
           </li>
         );
@@ -48,9 +51,7 @@ export default function OrderDetail({ order, now, slaSettings, onBack, onFinaliz
 
   return (
     <div className="max-w-[1200px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
-      <button onClick={onBack} className="-ml-1 h-9 px-1 flex items-center gap-1 text-ink2 font-semibold hover:text-ink">
-        <ChevronLeft size={18} /> Pedidos
-      </button>
+      <Button size="sm" icon={ChevronLeft} onClick={onBack} aria-label="Volver a pedidos">Pedidos</Button>
 
       <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5">
         <h1 className="text-[20px] sm:text-[22px] font-bold tracking-tight num">{order.id}</h1>

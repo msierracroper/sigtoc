@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { Table2, BarChart3 } from "lucide-react";
+import Button from "../ui/Button";
 
 // Contenedor de gráfica con alternativa accesible "Ver como tabla"
 export default function ChartCard({ title, subtitle, children, table, className = "" }) {
@@ -11,9 +13,9 @@ export default function ChartCard({ title, subtitle, children, table, className 
           {subtitle && <p className="text-[12.5px] text-ink2 mt-0.5">{subtitle}</p>}
         </div>
         {table && (
-          <button onClick={() => setAsTable((v) => !v)} className="text-[12.5px] font-semibold text-link whitespace-nowrap h-8 sm:h-auto">
+          <Button size="sm" icon={asTable ? BarChart3 : Table2} onClick={() => setAsTable((v) => !v)} aria-pressed={asTable} className="flex-none">
             {asTable ? "Ver gráfica" : "Ver como tabla"}
-          </button>
+          </Button>
         )}
       </div>
       {asTable && table ? (

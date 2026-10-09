@@ -1,6 +1,17 @@
 import React from "react";
-import { Upload, FileCheck2, ExternalLink, Loader2 } from "lucide-react";
+import { Upload, FileCheck2, ExternalLink, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { openDocument } from "../../services/storage";
+import Button, { buttonClass } from "../ui/Button";
+
+// Botón que abre el selector de archivos (label + input oculto, accesible con teclado)
+function FilePickButton({ accept, onFile, disabled, variant, icon: Icon, children }) {
+  return (
+    <label className={`${buttonClass({ variant, size: "sm" })} focus-within:outline focus-within:outline-2 focus-within:outline-focus ${disabled ? "opacity-60 pointer-events-none" : ""}`}>
+      <input type="file" accept={accept} className="sr-only" onChange={onFile} disabled={disabled} />
+      <Icon size={14} strokeWidth={2.2} aria-hidden="true" />{children}
+    </label>
+  );
+}
 
 // Casilla de documento compartida por PdfUploader y GuideUploader
 export default function FileSlot({ label, required, uploadedPath, busy, error, accept, hint, onFile, onRemove }) {
@@ -15,22 +26,18 @@ export default function FileSlot({ label, required, uploadedPath, busy, error, a
           <p className="text-[12.5px] text-ink2">{busy ? "Subiendo…" : uploadedPath ? "Cargado" : hint}</p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 pl-[46px]">
+      <div className="flex flex-wrap gap-2 mt-2.5">
         {uploadedPath ? (
           <>
-            <button onClick={() => openDocument(uploadedPath)} className="h-9 sm:h-7 flex items-center gap-1 font-semibold text-link">Ver <ExternalLink size={13} /></button>
-            <label className="h-9 sm:h-7 flex items-center font-semibold text-link cursor-pointer">
-              <input type="file" accept={accept} className="sr-only" onChange={onFile} disabled={busy} />Reemplazar
-            </label>
-            {onRemove && <button onClick={onRemove} className="h-9 sm:h-7 font-semibold text-ink2 hover:text-ink">Quitar</button>}
+            <Button size="sm" icon={ExternalLink} onClick={() => openDocument(uploadedPath)}>Ver documento</Button>
+            <FilePickButton accept={accept} onFile={onFile} disabled={busy} variant="secondary" icon={RefreshCw}>Reemplazar</FilePickButton>
+            {onRemove && <Button size="sm" icon={Trash2} onClick={onRemove}>Quitar</Button>}
           </>
         ) : (
-          <label className="h-9 sm:h-7 flex items-center font-semibold text-link cursor-pointer focus-within:underline">
-            <input type="file" accept={accept} className="sr-only" onChange={onFile} disabled={busy} />Elegir archivo
-          </label>
+          <FilePickButton accept={accept} onFile={onFile} disabled={busy} variant="secondary" icon={Upload}>Elegir archivo</FilePickButton>
         )}
       </div>
-      {error && <p className="text-[12.5px] text-crit mt-1.5 pl-[46px]" role="alert">{error}</p>}
+      {error && <p className="text-[12.5px] text-crit mt-1.5" role="alert">{error}</p>}
     </div>
   );
 }

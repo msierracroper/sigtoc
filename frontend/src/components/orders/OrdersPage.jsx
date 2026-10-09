@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, Search, ArrowUpDown, Package, AlertCircle, AlertTriangle, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Package, AlertCircle, AlertTriangle, SlidersHorizontal, ChevronRight } from "lucide-react";
 import { STAGES } from "../../constants/stages";
 import { sortByRisk, isAtRisk } from "../../utils/sla";
 import { fmtShort, fmtMinutes, shortUser } from "../../utils/format";
@@ -117,7 +117,7 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
       </div>
 
       {atRisk.length > 0 && (
-        <Banner tone="critical" action={<button className="h-9 sm:h-auto font-semibold text-link hover:underline" onClick={() => onTabChange("riesgo")}>Ver pedidos en riesgo</button>}>
+        <Banner tone="critical" action={<Button size="sm" iconRight={ChevronRight} onClick={() => onTabChange("riesgo")} className="mt-1.5">Ver pedidos en riesgo</Button>}>
           {/* Escritorio: detalle completo · Celular: resumen corto */}
           <span className="hidden md:inline">
             <b className="font-semibold">{atRisk.length} pedido{atRisk.length > 1 ? "s necesitan" : " necesita"} atención.</b>{" "}
@@ -240,6 +240,7 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
                   {["Pedido", "Etapa actual", "Tiempo en la etapa", "SLA", "Creado por", "Creado"].map((h) => (
                     <th key={h} className="px-3.5 py-2.5 border-b border-line2 font-semibold whitespace-nowrap">{h}</th>
                   ))}
+                  <th className="px-3.5 py-2.5 border-b border-line2"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -248,7 +249,7 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
                   return (
                     <tr key={o.id} onClick={() => onOpen(o.id)} className={`cursor-pointer border-b border-line2 last:border-0 hover:bg-surface2 ${closed ? "text-ink2" : ""}`}>
                       <td className="px-3.5 py-3">
-                        <button onClick={(e) => { e.stopPropagation(); onOpen(o.id); }} className="font-semibold text-ink text-left hover:underline underline-offset-2">{o.id}</button>
+                        <span className="font-semibold text-ink">{o.id}</span>
                         <div className="text-[12.5px] text-ink2 truncate max-w-[260px]">{o.cliente}</div>
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap"><div className="flex flex-col gap-1.5">{stageLabel(o)}<StageTrack order={o} sla={sla} className="w-28" /></div></td>
@@ -256,6 +257,10 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
                       <td className="px-3.5 py-3"><OrderStatusBadge order={o} sla={sla} /></td>
                       <td className="px-3.5 py-3">{shortUser(o.created_by_email)}</td>
                       <td className="px-3.5 py-3 whitespace-nowrap">{fmtShort(o.created_at)}</td>
+                      <td className="pr-3 py-3 text-right">
+                        <Button size="sm" iconOnly icon={ChevronRight} aria-label={`Abrir pedido ${o.id}`}
+                          onClick={(e) => { e.stopPropagation(); onOpen(o.id); }} />
+                      </td>
                     </tr>
                   );
                 })}

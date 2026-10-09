@@ -82,13 +82,12 @@ export default function LoginScreen({ onAuthed }) {
             {mode === "login" ? "Ingresar" : "Crear cuenta"}
           </Button>
         </form>
-        <p className="text-center text-[13px] text-ink2 mt-4">
-          {mode === "login" ? "¿Primera vez?" : "¿Ya tienes cuenta?"}{" "}
-          <button type="button" className="font-semibold text-link hover:underline"
-            onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setInfo(""); }}>
-            {mode === "login" ? "Crea tu cuenta" : "Inicia sesión"}
-          </button>
-        </p>
+        <div className="flex items-center justify-center gap-2 mt-4 text-[13px] text-ink2">
+          {mode === "login" ? "¿Primera vez?" : "¿Ya tienes cuenta?"}
+          <Button size="sm" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setInfo(""); }}>
+            {mode === "login" ? "Crear cuenta" : "Iniciar sesión"}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React from "react";
 import { Plus, X, ScanLine } from "lucide-react";
+import Button from "../../ui/Button";
 
 export default function SerialListEditor({ list, setList, disabled }) {
   const inputRefs = React.useRef([]);
@@ -48,9 +49,7 @@ export default function SerialListEditor({ list, setList, disabled }) {
       ))}
       {!disabled && (
         <>
-          <button onClick={() => add()} className="h-10 sm:h-8 flex items-center gap-1.5 font-semibold text-link">
-            <Plus size={16} /> Agregar otro serial
-          </button>
+          <Button size="sm" icon={Plus} onClick={() => add()}>Agregar otro serial</Button>
           <p className="text-[12.5px] text-ink2">Con lector de código de barras: escanea y presiona Enter, el campo siguiente queda listo solo.</p>
         </>
       )}

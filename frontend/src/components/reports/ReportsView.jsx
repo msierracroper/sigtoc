@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { CalendarDays, BarChart3 } from "lucide-react";
+import { CalendarDays, BarChart3, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { C } from "../../styles/tokens";
 import { chartFont, chartTooltipStyle } from "../../styles/charts";
@@ -7,6 +7,7 @@ import { fmtShort, fmtDay, fmtMinutes, shortUser } from "../../utils/format";
 import { periodRange, inRange, summarize, dailySeries, topExceeded, recentAnomalies } from "../../utils/reports";
 import { STAGES } from "../../constants/stages";
 import Badge from "../ui/Badge";
+import Button from "../ui/Button";
 import KpiCard from "./KpiCard";
 import ChartCard from "./ChartCard";
 import { ComplianceBars, TimeVsLimit } from "./StageBars";
@@ -116,8 +117,8 @@ export default function ReportsView({ orders, slaSettings, now: liveNow, onOpenO
                 ))}
                 {data.top.slice(0, 2).map((r) => (
                   <li key={r.order.id} className="flex justify-between items-center gap-3 py-3 border-t border-line2 first:border-0 text-[14px]">
-                    <span className="min-w-0 truncate"><button onClick={() => onOpenOrder(r.order.id)} className="font-semibold text-link num">{r.order.id}</button> · {r.stage}</span>
-                    <Badge tone={r.running ? "warning" : "critical"}>+{fmtMinutes(r.over)}</Badge>
+                    <span className="min-w-0"><span className="font-semibold num block truncate">{r.order.id}</span><span className="text-ink2 text-[13px]">{r.stage} · </span><Badge tone={r.running ? "warning" : "critical"}>+{fmtMinutes(r.over)}</Badge></span>
+                    <Button size="sm" iconRight={ChevronRight} onClick={() => onOpenOrder(r.order.id)} aria-label={`Ver pedido ${r.order.id}`}>Ver</Button>
                   </li>
                 ))}
               </ul>
@@ -161,13 +162,15 @@ export default function ReportsView({ orders, slaSettings, now: liveNow, onOpenO
                     <th className="font-semibold bg-surface2 px-2.5 py-2 border-b border-line2">Pedido</th>
                     <th className="font-semibold bg-surface2 px-2.5 py-2 border-b border-line2">Etapa</th>
                     <th className="font-semibold bg-surface2 px-2.5 py-2 border-b border-line2 whitespace-nowrap">Sobre el límite</th>
+                    <th className="bg-surface2 px-2.5 py-2 border-b border-line2"><span className="sr-only">Acciones</span></th>
                   </tr></thead>
                   <tbody>
                     {data.top.map((r) => (
                       <tr key={r.order.id} className="border-b border-line2 last:border-0">
-                        <td className="px-2.5 py-2.5 whitespace-nowrap"><button onClick={() => onOpenOrder(r.order.id)} className="font-semibold text-link hover:underline text-left">{r.order.id}</button></td>
+                        <td className="px-2.5 py-2.5 whitespace-nowrap font-semibold">{r.order.id}</td>
                         <td className="px-2.5 py-2.5">{r.stage}</td>
                         <td className="px-2.5 py-2.5 whitespace-nowrap"><Badge tone={r.running ? "warning" : "critical"}>+{fmtMinutes(r.over)}{r.running ? " · en curso" : ""}</Badge></td>
+                        <td className="px-2.5 py-2 text-right"><Button size="sm" iconRight={ChevronRight} onClick={() => onOpenOrder(r.order.id)} aria-label={`Ver pedido ${r.order.id}`}>Ver</Button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -182,20 +185,21 @@ export default function ReportsView({ orders, slaSettings, now: liveNow, onOpenO
             ) : (
               <ul>
                 {data.anomalies.map((o) => (
-                  <li key={o.id} className="grid sm:grid-cols-[200px_1fr_120px_200px] gap-x-4 gap-y-0.5 py-2.5 border-b border-line2 last:border-0 text-[13.5px] sm:text-[13px]">
-                    <button onClick={() => onOpenOrder(o.id)} className="font-semibold text-link hover:underline text-left num">{o.id}</button>
-                    <span>{o.cancel_info.reason}</span>
-                    <span className="text-ink2">{STAGES[o.current_stage - 1].short}</span>
-                    <span className="text-ink2 num">{shortUser(o.cancel_info.by)} · {fmtShort(o.cancel_info.at)}</span>
+                  <li key={o.id} className="grid grid-cols-[1fr_auto] sm:grid-cols-[180px_1fr_110px_190px_auto] items-center gap-x-4 gap-y-0.5 py-2.5 border-b border-line2 last:border-0 text-[13.5px] sm:text-[13px]">
+                    <span className="font-semibold num">{o.id}</span>
+                    <span className="col-start-1 sm:col-auto">{o.cancel_info.reason}</span>
+                    <span className="col-start-1 sm:col-auto text-ink2">{STAGES[o.current_stage - 1].short}</span>
+                    <span className="col-start-1 sm:col-auto text-ink2 num">{shortUser(o.cancel_info.by)} · {fmtShort(o.cancel_info.at)}</span>
+                    <Button size="sm" iconRight={ChevronRight} onClick={() => onOpenOrder(o.id)} aria-label={`Ver pedido ${o.id}`} className="row-start-1 col-start-2 sm:row-auto sm:col-auto">Ver</Button>
                   </li>
                 ))}
               </ul>
             )}
           </ChartCard>
 
-          <button onClick={() => setShowMore((v) => !v)} className="md:hidden w-full h-12 card font-semibold text-link">
+          <Button size="lg" icon={showMore ? ChevronUp : ChevronDown} onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} className="md:hidden w-full">
             {showMore ? "Ver menos" : "Ver más reportes"}
-          </button>
+          </Button>
         </>
       )}
     </div>
