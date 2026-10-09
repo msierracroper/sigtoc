@@ -1,0 +1,8 @@
+# Configuración mínima de Supabase CLI para el proyecto SIGTOC.
+# Ejecutar los comandos de la CLI desde ./backend (ver backend/README.md).
+project_id = "tpxglussuqmvhprrjwqz"
+
+# Llamada por pg_cron: se autentica con el header x-cron-secret, no con JWT.
+# Si se despliega sin esto, la CLI activa verify_jwt y el cron empieza a fallar con 401.
+[functions.sla-push-check]
+verify_jwt = false

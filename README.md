@@ -8,8 +8,9 @@ Origen: nació de un prototipo HTML estático + un diagrama de flujo, y evolucio
 
 ## 1. Stack técnico
 
-- **Frontend**: React 18 + Vite, un solo archivo principal `src/App.jsx` (todo el UI vive ahí: componentes, lógica, estilos).
-- **Estilos**: Tailwind CSS **compilado en build time** (PostCSS) — `tailwind.config.js` + `postcss.config.js` + `src/index.css` con las directivas `@tailwind`. **Importante**: NO usar Tailwind por CDN (`cdn.tailwindcss.com`). Se probó y falla tanto en el visor de archivos de Claude.ai (CSP restrictivo) como en producción (puede ser bloqueado por ad-blockers). Si el deploy se ve "sin estilos", esa es la primera sospecha.
+- **Estructura del repo**: `frontend/` (app React) y `backend/` (Supabase: Edge Functions + migraciones SQL). Ver sección 5.
+- **Frontend**: React 18 + Vite. El código vive en `frontend/src/`, separado en componentes, servicios (acceso a Supabase), estilos, constantes y utilidades. `package.json` y `vite.config.js` siguen en la raíz (`vite.config.js` apunta `root` a `./frontend` y deja el build en `./dist`), así que Vercel no necesitó ningún cambio.
+- **Estilos**: Tailwind CSS **compilado en build time** (PostCSS) — `frontend/tailwind.config.js` + `frontend/postcss.config.js` + `frontend/src/styles/index.css` con las directivas `@tailwind`. **Importante**: NO usar Tailwind por CDN (`cdn.tailwindcss.com`). Se probó y falla tanto en el visor de archivos de Claude.ai (CSP restrictivo) como en producción (puede ser bloqueado por ad-blockers). Si el deploy se ve "sin estilos", esa es la primera sospecha.
 - **Backend**: Supabase (Postgres + Auth + Storage + Edge Functions + Realtime + pg_cron).
 - **Íconos**: `lucide-react`.
 - **Gráficas**: `recharts` (módulo de Reportes).
@@ -32,7 +33,7 @@ Origen: nació de un prototipo HTML estático + un diagrama de flujo, y evolucio
 SUPABASE_URL=https://tpxglussuqmvhprrjwqz.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRweGdsdXNzdXFtdmhwcnJqd3F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NjU3MDQsImV4cCI6MjEwMTQ0MTcwNH0.mHak_G9n384IJaQxU18Sc6kupuR8HPkf0PfYsXEvgqI
 ```
-Viven en `src/supabaseClient.js` (hardcodeadas como respaldo) y opcionalmente en variables de entorno de Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+Viven en `frontend/src/lib/supabaseClient.js` (hardcodeadas como respaldo) y opcionalmente en variables de entorno de Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
 ### Secretos de la Edge Function (⚠️ sensibles — configurados manualmente en el dashboard de Supabase → Edge Functions → sla-push-check → Secrets, NO están en el código ni en git)
 ```
@@ -41,7 +42,7 @@ VAPID_PRIVATE_KEY=DxOkgFo5CaSQ-89wap8KOjRnpcA1kGjcHFcbCZ4tv10
 SITE_URL=https://cyc-auditoria-oc.vercel.app
 CRON_SECRET=58fe05e3a5b47ca807e809c941ac74bb9d9da47989a9678d
 ```
-La `VAPID_PUBLIC_KEY` también está en `src/supabaseClient.js` (es pública, esa sí puede vivir en el frontend).
+La `VAPID_PUBLIC_KEY` también está en `frontend/src/lib/supabaseClient.js` (es pública, esa sí puede vivir en el frontend).
 
 **Pitfall real que ya pasó**: al pegar `VAPID_PRIVATE_KEY` y `VAPID_PUBLIC_KEY` en el dashboard de Supabase, el copy-paste corrompió el valor (espacio/salto de línea invisible) y la función fallaba con `"Vapid public key should be 65 bytes long when decoded"` o `"Failed to decode base64url: invalid character"`. Solución: borrar el campo por completo y volver a pegar con cuidado. Si vuelve a pasar, verificar longitud decodificada con Node: `Buffer.from(key,'base64url').length` (debe dar 65 para la pública, 32 para la privada).
 
@@ -106,7 +107,7 @@ Políticas: usuarios autenticados pueden `select`/`insert`/`update` en ese bucke
 
 ## 4. Edge Function: `sla-push-check`
 
-Ubicación real: desplegada directamente en Supabase (no vive como archivo en este repo; el código fuente de referencia está en el historial de la conversación / puede pedirse de nuevo si hace falta reconstruirla).
+Código fuente: [`backend/supabase/functions/sla-push-check/index.ts`](backend/supabase/functions/sla-push-check/index.ts) (copia fiel de la versión desplegada, v5). Las migraciones SQL de la BD están en `backend/supabase/migrations/`. Cómo desplegar: ver [`backend/README.md`](backend/README.md).
 
 **Qué hace**: cada vez que se ejecuta,
 1. Lee `app_settings.sla_config` (SLA global).
@@ -130,11 +131,52 @@ Respuesta esperada: `{"checked": N, "subs": N, "sent": N, "errors": []}`.
 
 ---
 
-## 5. Frontend — estructura de `src/App.jsx`
+## 5. Estructura del código
 
-Todo vive en un solo archivo (deliberado, para simplicidad del MVP). Componentes principales, en orden de aparición:
+```
+SIGTOC/
+├── package.json, vite.config.js     # build desde la raíz (root: ./frontend, salida: ./dist) — Vercel sin cambios
+├── backend/                          # Supabase: Edge Functions + migraciones SQL (ver backend/README.md)
+└── frontend/
+    ├── index.html
+    ├── tailwind.config.js, postcss.config.js
+    ├── .env.example
+    ├── public/                       # PWA: manifest.json, sw.js, íconos
+    └── src/
+        ├── main.jsx                  # punto de entrada
+        ├── App.jsx                   # componente raíz: sesión, estado global, navegación, handlers
+        ├── lib/supabaseClient.js     # cliente de Supabase + PDF_BUCKET + VAPID_PUBLIC_KEY
+        ├── services/                 # TODO el acceso a Supabase vive aquí (los componentes no llaman a supabase directo)
+        │   ├── auth.js               # sesión, login, signup, logout
+        │   ├── orders.js             # fetch/crear/finalizar etapa/editar etapa/cancelar (arma audit_log, whatsapp_log, editHistory)
+        │   ├── settings.js           # SLA global (app_settings)
+        │   ├── storage.js            # subir PDF/RUT/guía + abrir con signed URL
+        │   ├── push.js               # service worker + suscripción Web Push
+        │   └── realtime.js           # suscripción a cambios de orders/app_settings
+        ├── styles/
+        │   ├── index.css             # fuentes IBM Plex (@import) + directivas Tailwind + base
+        │   ├── tokens.js             # paleta C {...}, FONT_SANS, FONT_MONO (también expuestos como colores de Tailwind)
+        │   └── charts.js             # estilos de recharts (chartFont, chartTooltipStyle)
+        ├── constants/stages.js       # STAGES (las 4 etapas) + DEFAULT_SLA
+        ├── utils/
+        │   ├── format.js             # nowIso, fmtClock, fmtShort, fmtDuration
+        │   └── sla.js                # slaStatus (alineado con slaState() de la Edge Function)
+        └── components/
+            ├── common/StatusPill.jsx
+            ├── auth/LoginScreen.jsx
+            ├── layout/               # AppHeader, AlertBell
+            ├── dashboard/Dashboard.jsx
+            ├── settings/SlaSettingsModal.jsx
+            ├── documents/            # PdfUploader, GuideUploader, DocLink
+            ├── orders/               # OrderDetail, NewOrderModal, CancelBox, Perforation
+            │   └── stages/           # StageForm, StageEditForm, StageDataView, StageHistoryModal, SerialListEditor
+            └── reports/              # ReportsView, KpiCard, ChartCard
+```
 
-- **Tokens de diseño** (`const C = {...}`): paleta "torre de control / manifiesto de bodega" — papel cálido, azul acero para operación, ámbar/rojo para SLA. Ver valores exactos en el archivo.
+**Convención**: los componentes solo se encargan de UI. Cualquier lectura o escritura en Supabase va en `services/`, y colores y tipografías salen de `styles/tokens.js`.
+
+Qué hace cada componente:
+
 - `StatusPill` — pastilla de estado SLA (en tiempo / por vencer / excedido).
 - `LoginScreen` — login + signup con Supabase Auth (email/password).
 - `NewOrderModal` — crear pedido (solo pide cliente; el SLA ya no se pide aquí, usa el global).
@@ -151,18 +193,16 @@ Todo vive en un solo archivo (deliberado, para simplicidad del MVP). Componentes
 - `StageEditForm` — formulario de edición de una etapa **ya completada** (crea nueva versión).
 - `StageHistoryModal` — modal que junta `StageDataView` + `StageEditForm` + listado de versiones anteriores. Se abre al hacer clic en una etapa completada del riel.
 - `OrderDetail` — vista de detalle de un pedido: ticket header, riel de 4 etapas (clicable si están completadas), formulario de la etapa activa, auditoría, centro de notificaciones.
-- `avg`, `KpiCard`, `ChartCard`, `chartFont` — helpers del módulo de reportes.
+- `KpiCard`, `ChartCard` — piezas del módulo de reportes.
 - `ReportsView` — reportes con rango de fechas, KPIs, 4 gráficas (recharts) y tabla de motivos de cancelación.
+- `AppHeader` — barra superior con logo, campanita y reloj.
 - `AlertBell` — campanita en el header global, con badge rojo de conteo de alertas SLA activas y dropdown para saltar a esos pedidos (responsive: en mobile se muestra como panel fijo, no dropdown flotante).
-- `App` — componente raíz: maneja sesión (Supabase Auth), fetch de `orders`/`app_settings` con **Realtime** (se actualiza solo en todos los dispositivos conectados), registro del service worker, suscripción push, deep-link (`?order=ID` abre el pedido directo), y todas las funciones `handle*` que hacen `insert`/`update` contra Supabase.
-
-### `src/supabaseClient.js`
-Cliente de Supabase + constantes `PDF_BUCKET = "pedido-pdfs"` y `VAPID_PUBLIC_KEY`.
+- `App` — componente raíz: maneja sesión, carga de `orders`/`app_settings` con Realtime, registro del service worker, suscripción push, deep-link (`?order=ID` abre el pedido directo) y los handlers `handle*` que delegan en `services/`.
 
 ### PWA
-- `public/manifest.json` — nombre SIGTOC, `display: standalone`, íconos del logo real de la empresa (C&C).
-- `public/sw.js` — service worker: maneja evento `push` (muestra la notificación) y `notificationclick` (navega/enfoca la ventana en la URL del pedido).
-- `public/icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — generados a partir del logo C&C que subió el usuario (óvalo plateado/rojo sobre fondo negro), recortados a cuadrado con margen para que no se corten con máscaras del sistema operativo.
+- `frontend/public/manifest.json` — nombre SIGTOC, `display: standalone`, íconos del logo real de la empresa (C&C).
+- `frontend/public/sw.js` — service worker: maneja evento `push` (muestra la notificación) y `notificationclick` (navega/enfoca la ventana en la URL del pedido).
+- `frontend/public/icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — generados a partir del logo C&C que subió el usuario (óvalo plateado/rojo sobre fondo negro), recortados a cuadrado con margen para que no se corten con máscaras del sistema operativo.
 
 ---
 
@@ -219,7 +259,7 @@ npm run dev       # servidor de desarrollo
 npm run build     # build de producción (verificar que compile sin errores antes de cada push)
 ```
 
-No hace falta `.env.local` para que funcione (las credenciales anon/públicas están hardcodeadas como respaldo en `supabaseClient.js`), pero si se quiere usar variables de entorno, ver `.env.example`.
+No hace falta `.env.local` para que funcione (las credenciales anon/públicas están hardcodeadas como respaldo en `frontend/src/lib/supabaseClient.js`), pero si se quiere usar variables de entorno, ver `frontend/.env.example` (el `.env.local` va dentro de `frontend/`).
 
 ## 10. Flujo de trabajo esperado a partir de ahora
 
