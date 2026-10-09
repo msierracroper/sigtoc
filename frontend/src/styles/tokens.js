@@ -1,18 +1,26 @@
 /* ============ TOKENS DE DISEÑO ============
- * Paleta "torre de control / manifiesto de bodega": papel cálido, azul acero para
- * operación, ámbar/rojo para SLA. También se exponen como colores de Tailwind
- * (ver tailwind.config.js).
+ * Sistema estándar de la categoría con acabado tipo Shopify Polaris / Stripe Dashboard
+ * (ver PRODUCT.md → Brand Commitments). Se exponen como colores de Tailwind en
+ * tailwind.config.js (bg-surface, text-ink2, bg-critBg...), así que los componentes
+ * usan clases; este objeto queda para los lugares que necesitan el valor en JS (gráficas).
  */
 export const C = {
-  paper: "#F6F4EE", paperDark: "#ECE8DC", card: "#FFFFFF",
-  ink: "#1E2530", inkSoft: "#646B76", inkFaint: "#9B9A8F",
-  steel: "#2C4A73", steelDark: "#1B2E47", steelSoft: "#E3E9F1",
-  alert: "#B7472A", alertBg: "#F8E7E1",
-  warn: "#A97327", warnBg: "#F6EED9",
-  ok: "#3D7658", okBg: "#E4EFE7",
-  line: "#DBD6C8", lineStrong: "#C1BBA7",
+  // superficies
+  bg: "#F1F2F4", surface: "#FFFFFF", surface2: "#F7F7F8", nav: "#EBEBEB", topbar: "#1A1A1A", topbarField: "#303030",
+  // texto
+  ink: "#202223", ink2: "#616161", ink3: "#8A8A8A",
+  // líneas
+  line: "#E3E3E3", line2: "#EBEBEB",
+  // acciones
+  primary: "#202223", link: "#005BD3", focus: "#005BD3",
+  // estados (texto / fondo / barra)
+  crit: "#8E1F0B", critBg: "#FEE9E8", critBar: "#E51C00",
+  warn: "#5E4200", warnBg: "#FFF1D6", warnBar: "#E8A200",
+  ok: "#0C5132", okBg: "#CDFEE1", okBar: "#29845A",
+  neutral: "#4A4A4A", neutralBg: "#EBEBEB",
+  info: "#00527C", infoBg: "#E0F0FF", infoBar: "#9BB8F0",
+  // serie de datos en gráficas
+  series: "#4F5FD6", seriesSoft: "#C9CCE8",
 };
 
-// Tipografías (cargadas desde Google Fonts en styles/index.css)
-export const FONT_SANS = "'IBM Plex Sans', sans-serif";
-export const FONT_MONO = "'IBM Plex Mono', monospace";
+export const FONT_SANS = "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";

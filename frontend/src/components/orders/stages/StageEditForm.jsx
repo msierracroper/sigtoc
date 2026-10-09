@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { C } from "../../../styles/tokens";
+import Button from "../../ui/Button";
 import PdfUploader from "../../documents/PdfUploader";
 import GuideUploader from "../../documents/GuideUploader";
 import SerialListEditor from "./SerialListEditor";
+import { DeliveryModePicker } from "./StageForm";
 
-export default function StageEditForm({ orderId, stageId, data, onSave, onCancel }) {
+export default function StageEditForm({ orderId, stageId, data, onSave, onCancel, busy }) {
   const [pdfPath, setPdfPath] = useState(data?.pdfPath || null);
   const [rutPath, setRutPath] = useState(data?.rutPath || null);
   const [serialesList, setSerialesList] = useState(
@@ -14,7 +15,6 @@ export default function StageEditForm({ orderId, stageId, data, onSave, onCancel
   const [modo, setModo] = useState(data?.modo || "guia");
   const [guiaNumero, setGuiaNumero] = useState(data?.guiaNumero || "");
   const [guiaFilePath, setGuiaFilePath] = useState(data?.guiaFilePath || null);
-  const inputStyle = { border: `1px solid ${C.line}` };
 
   function save() {
     if (stageId === 1) onSave({ pdfPath, rutPath });
@@ -29,36 +29,36 @@ export default function StageEditForm({ orderId, stageId, data, onSave, onCancel
   return (
     <div className="space-y-3">
       {stageId === 1 && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <PdfUploader orderId={orderId} kind="pedido" label="PDF del pedido" uploadedPath={pdfPath} onUploaded={setPdfPath} />
           <PdfUploader orderId={orderId} kind="rut" label="RUT (opcional)" uploadedPath={rutPath} onUploaded={setRutPath} />
         </div>
       )}
       {stageId === 2 && <SerialListEditor list={serialesList} setList={setSerialesList} disabled={false} />}
       {stageId === 3 && (
-        <input value={factura} onChange={(e) => setFactura(e.target.value)} placeholder="Número de factura"
-          className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
+        <div>
+          <label className="label" htmlFor="factura-edit">Número de factura</label>
+          <input id="factura-edit" value={factura} onChange={(e) => setFactura(e.target.value)} className="field" />
+        </div>
       )}
       {stageId === 4 && (
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <label onClick={() => setModo("guia")} className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-xs"
-              style={{ backgroundColor: modo === "guia" ? C.steelSoft : C.paperDark }}>Envío con guía</label>
-            <label onClick={() => setModo("tienda")} className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-xs"
-              style={{ backgroundColor: modo === "tienda" ? C.steelSoft : C.paperDark }}>Entrega en tienda</label>
-          </div>
+        <div className="space-y-3">
+          <DeliveryModePicker value={modo} onChange={setModo} />
           {modo === "guia" && (
             <>
-              <input value={guiaNumero} onChange={(e) => setGuiaNumero(e.target.value)} placeholder="Número de guía (opcional si subes el archivo)"
-                className="w-full text-xs px-3 py-2.5 rounded outline-none" style={inputStyle} />
-              <GuideUploader orderId={orderId} label="Foto o PDF de la guía (opcional si escribes el número)" uploadedPath={guiaFilePath} onUploaded={setGuiaFilePath} />
+              <div>
+                <label className="label" htmlFor="guia-edit">Número de guía</label>
+                <input id="guia-edit" value={guiaNumero} onChange={(e) => setGuiaNumero(e.target.value)} className="field" />
+              </div>
+              <GuideUploader orderId={orderId} label="Foto o PDF de la guía" uploadedPath={guiaFilePath} onUploaded={setGuiaFilePath} />
             </>
           )}
         </div>
       )}
-      <div className="flex gap-2">
-        <button onClick={save} className="px-4 py-2 rounded text-xs font-bold text-white" style={{ backgroundColor: C.steel }}>Guardar nueva versión</button>
-        <button onClick={onCancel} className="px-4 py-2 rounded text-xs font-semibold" style={{ color: C.inkSoft }}>Cancelar</button>
+      <p className="text-[12.5px] text-ink2">Los datos actuales se conservan como versión anterior en el historial.</p>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" onClick={save} busy={busy}>Guardar nueva versión</Button>
+        <Button onClick={onCancel}>Cancelar</Button>
       </div>
     </div>
   );

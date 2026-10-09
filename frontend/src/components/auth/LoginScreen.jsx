@@ -1,7 +1,19 @@
 import React, { useState } from "react";
-import { ClipboardList, Lock, Mail, Eye, EyeOff } from "lucide-react";
-import { C, FONT_MONO } from "../../styles/tokens";
+import { Eye, EyeOff } from "lucide-react";
 import { signIn, signUp } from "../../services/auth";
+import Button from "../ui/Button";
+
+// Mensajes de Supabase Auth traducidos (llegan en inglés)
+function friendlyError(err) {
+  const msg = (err?.message || "").toLowerCase();
+  if (msg.includes("invalid login")) return "Correo o contraseña incorrectos.";
+  if (msg.includes("email not confirmed")) return "Confirma tu correo antes de iniciar sesión.";
+  if (msg.includes("already registered")) return "Ya existe una cuenta con este correo. Inicia sesión.";
+  if (msg.includes("password should be")) return "La contraseña debe tener al menos 6 caracteres.";
+  if (msg.includes("valid email") || msg.includes("invalid email")) return "Escribe un correo válido.";
+  if (msg.includes("fetch") || msg.includes("network")) return "Sin conexión con el servidor. Revisa tu internet e inténtalo de nuevo.";
+  return "No pudimos iniciar sesión. Inténtalo de nuevo.";
+}
 
 /* ============ LOGIN / SIGNUP (Supabase Auth) ============ */
 export default function LoginScreen({ onAuthed }) {
@@ -28,54 +40,55 @@ export default function LoginScreen({ onAuthed }) {
         onAuthed(data.session);
       }
     } catch (err) {
-      setError(err.message || "Ocurrió un error.");
+      setError(friendlyError(err));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: C.paperDark }}>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded mb-3" style={{ backgroundColor: C.steelDark }}>
-            <ClipboardList size={22} color="#fff" />
+    <div className="min-h-screen flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-[380px]">
+        <div className="flex items-center gap-2.5 mb-6">
+          <span className="w-9 h-9 rounded-[10px] bg-topbar text-white grid place-items-center text-[16px] font-extrabold">S</span>
+          <div>
+            <p className="text-[16px] font-bold tracking-tight leading-tight">SIGTOC</p>
+            <p className="text-[12.5px] text-ink2 leading-tight">Trazabilidad y auditoría de pedidos</p>
           </div>
-          <h1 className="text-lg font-bold" style={{ color: C.ink, fontFamily: FONT_MONO }}>SIGTOC</h1>
-          <p className="text-xs mt-1" style={{ color: C.inkSoft }}>Trazabilidad y auditoría de pedidos</p>
         </div>
-        <form onSubmit={submit} className="rounded-lg p-6 space-y-4" style={{ backgroundColor: C.card, border: `1px solid ${C.line}` }}>
+        <form onSubmit={submit} className="card p-6 space-y-4" noValidate>
+          <h1 className="text-[18px] font-bold tracking-tight">{mode === "login" ? "Inicia sesión" : "Crea tu cuenta"}</h1>
           <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wide flex items-center gap-1.5 mb-1.5" style={{ color: C.inkSoft }}>
-              <Mail size={12} /> Correo
-            </label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email"
-              className="w-full text-sm px-3 py-2 rounded outline-none" style={{ border: `1px solid ${C.line}` }} placeholder="tucorreo@empresa.com" />
+            <label className="label" htmlFor="email">Correo</label>
+            <input id="email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email"
+              className="field" placeholder="tucorreo@empresa.com" />
           </div>
           <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wide flex items-center gap-1.5 mb-1.5" style={{ color: C.inkSoft }}>
-              <Lock size={12} /> Contraseña
-            </label>
+            <label className="label" htmlFor="password">Contraseña</label>
             <div className="relative">
-              <input value={password} onChange={(e) => setPassword(e.target.value)} type={showPassword ? "text" : "password"}
-                className="w-full text-sm pl-3 pr-10 py-2 rounded outline-none" style={{ border: `1px solid ${C.line}` }} placeholder="Mínimo 6 caracteres" />
+              <input id="password" value={password} onChange={(e) => setPassword(e.target.value)} type={showPassword ? "text" : "password"}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                className="field pr-11" placeholder="Mínimo 6 caracteres" />
               <button type="button" onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                className="absolute right-0 top-0 h-full px-3 flex items-center" style={{ color: C.inkSoft }}>
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                className="absolute right-0 top-0 h-full w-11 grid place-items-center text-ink2 hover:text-ink">
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
           </div>
-          {error && <p className="text-xs font-medium" style={{ color: C.alert }}>{error}</p>}
-          {info && <p className="text-xs font-medium" style={{ color: C.ok }}>{info}</p>}
-          <button type="submit" disabled={busy} className="w-full py-2.5 rounded text-sm font-semibold text-white disabled:opacity-50" style={{ backgroundColor: C.steel }}>
-            {busy ? "Procesando..." : mode === "login" ? "Ingresar" : "Crear cuenta"}
-          </button>
-          <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setInfo(""); }}
-            className="w-full text-[11px] text-center" style={{ color: C.inkSoft }}>
-            {mode === "login" ? "¿Primera vez? Crea tu cuenta" : "¿Ya tienes cuenta? Inicia sesión"}
-          </button>
+          {error && <p className="text-[13px] font-medium text-crit" role="alert">{error}</p>}
+          {info && <p className="text-[13px] font-medium text-ok" role="status">{info}</p>}
+          <Button type="submit" variant="primary" size="lg" className="w-full" busy={busy}>
+            {mode === "login" ? "Ingresar" : "Crear cuenta"}
+          </Button>
         </form>
+        <p className="text-center text-[13px] text-ink2 mt-4">
+          {mode === "login" ? "¿Primera vez?" : "¿Ya tienes cuenta?"}{" "}
+          <button type="button" className="font-semibold text-link hover:underline"
+            onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setInfo(""); }}>
+            {mode === "login" ? "Crea tu cuenta" : "Inicia sesión"}
+          </button>
+        </p>
       </div>
     </div>
   );

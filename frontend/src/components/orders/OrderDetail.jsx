@@ -1,176 +1,141 @@
 import React, { useState } from "react";
-import { CheckCircle2, AlertTriangle, ArrowLeft, ClipboardList, Bell } from "lucide-react";
-import { C, FONT_MONO } from "../../styles/tokens";
+import { ChevronLeft, CheckCircle2, AlertTriangle, ClipboardList, Bell } from "lucide-react";
 import { STAGES } from "../../constants/stages";
-import { fmtShort, fmtDuration } from "../../utils/format";
+import { fmtShort, fmtMinutes, shortUser } from "../../utils/format";
 import { slaStatus } from "../../utils/sla";
-import StatusPill from "../common/StatusPill";
-import Perforation from "./Perforation";
+import { OrderStatusBadge } from "../ui/Badge";
+import Banner from "../ui/Banner";
+import { SlaMeter } from "../ui/Meter";
 import CancelBox from "./CancelBox";
 import StageForm from "./stages/StageForm";
 import StageHistoryModal from "./stages/StageHistoryModal";
 
+function Stepper({ order, sla, onView }) {
+  return (
+    <ol className="card px-3 sm:px-5 py-4 flex items-start">
+      {STAGES.map((s, idx) => {
+        const stg = order.stages[s.id] || {};
+        const done = !!stg.completedAt;
+        const active = order.status === "abierto" && order.current_stage === s.id;
+        const versions = (stg.editHistory?.length || 0) + 1;
+        const ring = done ? "bg-okBg text-ok" : active
+          ? sla?.state === "excedido" ? "bg-critBg text-crit ring-2 ring-critBar" : sla?.state === "alerta" ? "bg-warnBg text-warn ring-2 ring-warnBar" : "bg-infoBg text-info ring-2 ring-link"
+          : "bg-surface2 text-ink3";
+        return (
+          <li key={s.id} className="relative flex-1 flex items-start">
+            {idx < STAGES.length - 1 && <span className={`absolute top-[22px] left-[calc(50%+24px)] right-[calc(-50%+24px)] h-0.5 rounded ${done ? "bg-okBar" : "bg-line2"}`} aria-hidden="true" />}
+            <button disabled={!done} onClick={() => onView(s)}
+              className={`flex-1 flex flex-col items-center gap-1.5 text-center rounded-lg py-1 ${done ? "hover:bg-surface2 cursor-pointer" : "cursor-default"}`}
+              aria-label={done ? `Ver o editar ${s.name}` : s.name}>
+              <span className={`relative w-9 h-9 rounded-full grid place-items-center ${ring}`}>
+                {done ? <CheckCircle2 size={18} /> : <s.icon size={17} />}
+                {done && versions > 1 && <span className="absolute -top-1.5 -right-2 h-4 px-1 rounded-full bg-ink text-white text-[10px] font-semibold grid place-items-center">v{versions}</span>}
+              </span>
+              <span className={`text-[12.5px] font-semibold leading-tight ${done || active ? "text-ink" : "text-ink3"}`}>{s.short}</span>
+              <span className={`text-[11.5px] leading-tight ${done ? "text-link" : "text-ink3"}`}>{done ? "Ver detalle" : active ? "En curso" : "Pendiente"}</span>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 export default function OrderDetail({ order, now, slaSettings, onBack, onFinalizeStage, onCancelOrder, onEditStage }) {
   const [viewingStage, setViewingStage] = useState(null);
   const sla = slaStatus(order, slaSettings, now);
-  const statusMap = {
-    cerrado: { label: "Entregado", bg: C.okBg, fg: C.ok },
-    cancelado: { label: "Cancelado", bg: C.alertBg, fg: C.alert },
-    abierto: { label: "En proceso", bg: C.steelSoft, fg: C.steel },
-  };
-  const st = statusMap[order.status] || statusMap.abierto;
+  const stage = STAGES[order.current_stage - 1];
+
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-xs font-semibold mb-4" style={{ color: C.inkSoft }}>
-        <ArrowLeft size={14} /> Volver al panel
+    <div className="max-w-[1200px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
+      <button onClick={onBack} className="-ml-1 h-9 px-1 flex items-center gap-1 text-ink2 font-semibold hover:text-ink">
+        <ChevronLeft size={18} /> Pedidos
       </button>
 
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5">
+        <h1 className="text-[20px] sm:text-[22px] font-bold tracking-tight num">{order.id}</h1>
+        <div className="mt-1"><OrderStatusBadge order={order} sla={sla} /></div>
+        <p className="w-full text-ink2 text-[14px]">{order.cliente} · creado {fmtShort(order.created_at)} por {shortUser(order.created_by_email)}</p>
+      </div>
+
       {order.status === "cancelado" && order.cancel_info && (
-        <div className="rounded-lg p-4 mb-4 flex items-start gap-3" style={{ backgroundColor: C.alertBg, border: `1px solid ${C.alert}` }}>
-          <AlertTriangle size={18} color={C.alert} className="mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-xs font-bold" style={{ color: C.alert }}>Pedido finalizado por anomalía</p>
-            <p className="text-xs mt-1" style={{ color: C.ink }}>{order.cancel_info.reason}</p>
-            <p className="text-[11px] mt-1" style={{ color: C.inkSoft }}>
-              Registrado por {order.cancel_info.by} · {fmtShort(order.cancel_info.at)}
-            </p>
-          </div>
-        </div>
+        <Banner tone="warning">
+          <b className="font-semibold">Pedido finalizado por anomalía en {stage.name}.</b> {order.cancel_info.reason}
+          <span className="block text-[12.5px] mt-0.5 opacity-80">Registrado por {shortUser(order.cancel_info.by)} · {fmtShort(order.cancel_info.at)}</span>
+        </Banner>
       )}
 
-      <div className="flex rounded-lg overflow-hidden mb-6" style={{ border: `1px solid ${C.line}` }}>
-        <div className="flex-1 p-5" style={{ backgroundColor: C.card }}>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: C.inkFaint }}>ID único de pedido</p>
-              <p className="text-xl font-bold mt-0.5" style={{ color: C.ink, fontFamily: FONT_MONO }}>{order.id}</p>
-              <p className="text-xs mt-1" style={{ color: C.inkSoft }}>{order.cliente}</p>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded" style={{ backgroundColor: st.bg, color: st.fg }}>
-                {st.label}
-              </span>
-              {sla && <div className="mt-2"><StatusPill state={sla.state} /></div>}
-            </div>
-          </div>
-          <div className="flex gap-6 mt-4 pt-3" style={{ borderTop: `1px dashed ${C.line}` }}>
-            <div>
-              <p className="text-[10px] uppercase font-semibold" style={{ color: C.inkFaint }}>Creado</p>
-              <p className="text-xs mt-0.5" style={{ color: C.ink }}>{fmtShort(order.created_at)} · {order.created_by_email}</p>
-            </div>
-            {sla && (
-              <div>
-                <p className="text-[10px] uppercase font-semibold" style={{ color: C.inkFaint }}>Tiempo en etapa actual</p>
-                <p className="text-xs mt-0.5 font-semibold" style={{ color: C.ink, fontFamily: FONT_MONO }}>
-                  {fmtDuration(sla.elapsedMs)} / límite {sla.limitMin} min
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-        <Perforation />
-      </div>
+      <Stepper order={order} sla={sla} onView={setViewingStage} />
 
-      <div className="flex items-center mb-6 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
-        {STAGES.map((s, idx) => {
-          const stg = order.stages[s.id] || {};
-          const done = !!stg.completedAt;
-          const active = order.current_stage === s.id && order.status === "abierto";
-          const color = done ? C.ok : active ? C.steel : C.inkFaint;
-          const versionCount = (stg.editHistory?.length || 0) + 1;
-          return (
-            <React.Fragment key={s.id}>
-              <div className="flex flex-col items-center" style={{ minWidth: 90 }}>
-                <button
-                  onClick={() => done && setViewingStage(s)}
-                  className="w-9 h-9 rounded-full flex items-center justify-center relative"
-                  style={{ backgroundColor: done ? C.okBg : active ? C.steelSoft : C.paperDark, border: `2px solid ${color}`, cursor: done ? "pointer" : "default" }}
-                >
-                  {done ? <CheckCircle2 size={16} color={color} /> : <s.icon size={15} color={color} />}
-                  {done && versionCount > 1 && (
-                    <span className="absolute -top-1.5 -right-1.5 text-[8px] font-bold text-white rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: C.steel, width: 15, height: 15 }}>v{versionCount}</span>
-                  )}
-                </button>
-                <span className="text-[10px] font-semibold mt-1.5 text-center" style={{ color }}>{s.short}</span>
-                <span className="text-[10px]" style={{ color: done ? C.steel : C.inkFaint, fontFamily: FONT_MONO, textDecoration: done ? "underline" : "none" }}>
-                  {done ? "ver detalle" : active ? "en curso" : "pendiente"}
-                </span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        <section className="lg:col-span-7 card">
+          {order.status === "cerrado" ? (
+            <div className="text-center py-10 px-6">
+              <CheckCircle2 size={30} className="mx-auto mb-2 text-okBar" />
+              <p className="text-[15px] font-semibold">Pedido entregado</p>
+              <p className="text-ink2 mt-1">Las 4 etapas quedaron registradas en la auditoría. Selecciona una etapa para ver o corregir sus datos.</p>
+            </div>
+          ) : order.status === "cancelado" ? (
+            <div className="text-center py-10 px-6">
+              <AlertTriangle size={30} className="mx-auto mb-2 text-warnBar" />
+              <p className="text-[15px] font-semibold">Pedido detenido</p>
+              <p className="text-ink2 mt-1">No admite más etapas. El motivo quedó registrado arriba y en la auditoría.</p>
+            </div>
+          ) : (
+            <>
+              <div className="px-4 sm:px-5 pt-4 sm:pt-5 pb-4 border-b border-line2">
+                <h2 className="text-[16px] font-semibold">Etapa {order.current_stage} · {stage.name}</h2>
+                <p className="text-ink2 mt-0.5">{stage.desc}</p>
+                {sla && (
+                  <div className="mt-3 num">
+                    <div className="flex justify-between text-[13.5px] mb-1.5">
+                      <span className="text-ink2"><b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : "text-ink"}`}>{Math.floor(sla.elapsedMin)}</b> de {sla.limitMin} min en la etapa</span>
+                      <span className={`font-semibold ${sla.state === "excedido" ? "text-crit" : sla.state === "alerta" ? "text-warn" : "text-ok"}`}>
+                        {sla.state === "excedido" ? `Excedido por ${fmtMinutes(-sla.remainingMin)}` : `Quedan ${fmtMinutes(sla.remainingMin)}`}
+                      </span>
+                    </div>
+                    <SlaMeter sla={sla} className="h-2" />
+                  </div>
+                )}
               </div>
-              {idx < STAGES.length - 1 && <div className="flex-1 h-0.5 mx-1" style={{ backgroundColor: done ? C.ok : C.line }} />}
-            </React.Fragment>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-7">
-          <div className="rounded-lg p-5" style={{ backgroundColor: C.card, border: `1px solid ${C.line}` }}>
-            {order.status === "cerrado" ? (
-              <div className="text-center py-6">
-                <CheckCircle2 size={26} color={C.ok} className="mx-auto mb-2" />
-                <p className="text-sm font-bold" style={{ color: C.ink }}>Pedido cerrado y entregado</p>
-                <p className="text-xs mt-1" style={{ color: C.inkSoft }}>Todas las etapas quedaron registradas en la auditoría.</p>
-              </div>
-            ) : order.status === "cancelado" ? (
-              <div className="text-center py-6">
-                <AlertTriangle size={26} color={C.alert} className="mx-auto mb-2" />
-                <p className="text-sm font-bold" style={{ color: C.ink }}>Pedido finalizado por anomalía</p>
-                <p className="text-xs mt-1" style={{ color: C.inkSoft }}>Revisa el motivo registrado arriba.</p>
-              </div>
-            ) : (
-              <>
-                <h4 className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: C.steel }}>
-                  Etapa {order.current_stage} · {STAGES[order.current_stage - 1].name}
-                </h4>
-                <p className="text-xs mb-4" style={{ color: C.inkSoft }}>{STAGES[order.current_stage - 1].desc}</p>
-                <StageForm orderId={order.id} stageId={order.current_stage} onFinalize={(data) => onFinalizeStage(order.current_stage, data)} />
+              <div className="p-4 sm:p-5">
+                <StageForm key={`${order.id}-${order.current_stage}`} orderId={order.id} stageId={order.current_stage}
+                  onFinalize={(data) => onFinalizeStage(order.current_stage, data)} />
                 <CancelBox onCancel={onCancelOrder} />
-              </>
-            )}
-          </div>
-        </div>
+              </div>
+            </>
+          )}
+        </section>
 
-        <div className="lg:col-span-5 space-y-4">
-          <div className="rounded-lg p-4" style={{ backgroundColor: C.card, border: `1px solid ${C.line}` }}>
-            <h5 className="text-[11px] font-bold uppercase tracking-wide flex items-center gap-1.5 mb-2.5" style={{ color: C.inkSoft }}>
-              <ClipboardList size={13} /> Registro de auditoría
-            </h5>
-            <div className="space-y-1.5 max-h-52 overflow-y-auto">
+        <aside className="lg:col-span-5 space-y-4">
+          <div className="card">
+            <h3 className="flex items-center gap-2 px-4 pt-4 pb-2 font-semibold"><ClipboardList size={16} className="text-ink2" /> Registro de auditoría</h3>
+            <ol className="px-4 pb-3 max-h-64 overflow-y-auto">
               {order.audit_log.slice().reverse().map((a, i) => (
-                <div key={i} className="text-[11px] px-2 py-1.5 rounded" style={{ backgroundColor: C.paperDark }}>
-                  <span className="font-semibold" style={{ color: C.steel, fontFamily: FONT_MONO }}>{fmtShort(a.ts)}</span>{" "}
-                  <span style={{ color: C.inkSoft }}>· {a.user} —</span> {a.action}
-                </div>
+                <li key={i} className="py-2 border-b border-line2 last:border-0 text-[13px]">
+                  <p>{a.action}</p>
+                  <p className="text-[12px] text-ink2 mt-0.5 num">{fmtShort(a.ts)} · {shortUser(a.user)}</p>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
-
-          <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
-            <div className="px-4 py-2.5 flex items-center gap-2" style={{ backgroundColor: C.steelDark }}>
-              <Bell size={15} color="#fff" />
-              <span className="text-xs font-semibold text-white">Centro de notificaciones</span>
-            </div>
-            <div className="p-3 space-y-2 max-h-52 overflow-y-auto" style={{ backgroundColor: C.paperDark }}>
+          <div className="card">
+            <h3 className="flex items-center gap-2 px-4 pt-4 pb-2 font-semibold"><Bell size={16} className="text-ink2" /> Centro de notificaciones</h3>
+            <ol className="px-4 pb-3 max-h-64 overflow-y-auto">
               {order.whatsapp_log.slice().reverse().map((w, i) => (
-                <div key={i} className="bg-white rounded-lg px-2.5 py-2 text-[11px] shadow-sm max-w-[92%] ml-auto">
-                  <p style={{ color: C.ink }}>{w.text}</p>
-                  <p className="text-right text-[9px] mt-1" style={{ color: C.inkFaint }}>{fmtShort(w.ts)}</p>
-                </div>
+                <li key={i} className="py-2 border-b border-line2 last:border-0 text-[13px]">
+                  <p>{w.text}</p>
+                  <p className="text-[12px] text-ink2 mt-0.5 num">{fmtShort(w.ts)}</p>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
-        </div>
+        </aside>
       </div>
 
       {viewingStage && (
-        <StageHistoryModal
-          orderId={order.id}
-          stage={viewingStage}
-          stageData={order.stages[viewingStage.id]}
-          onClose={() => setViewingStage(null)}
-          onSaveEdit={(newData) => onEditStage(viewingStage.id, newData)}
-        />
+        <StageHistoryModal orderId={order.id} stage={viewingStage} stageData={order.stages[viewingStage.id]}
+          onClose={() => setViewingStage(null)} onSaveEdit={(newData) => onEditStage(viewingStage.id, newData)} />
       )}
     </div>
   );

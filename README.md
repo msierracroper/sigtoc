@@ -14,7 +14,7 @@ Origen: nació de un prototipo HTML estático + un diagrama de flujo, y evolucio
 - **Backend**: Supabase (Postgres + Auth + Storage + Edge Functions + Realtime + pg_cron).
 - **Íconos**: `lucide-react`.
 - **Gráficas**: `recharts` (módulo de Reportes).
-- **Tipografías**: IBM Plex Mono (datos/IDs/timestamps) + IBM Plex Sans (texto general), cargadas por `@import` de Google Fonts dentro de un `<style>` en el propio componente.
+- **Tipografía**: Inter (texto, datos y cifras con números tabulares), cargada por `@import` de Google Fonts en `frontend/src/styles/index.css`.
 - **Despliegue**: Vercel, conectado por Git al repo de GitHub (auto-deploy en cada `git push` a `main`). **No** se debe subir por zip manual — eso causó confusión varias veces ("por qué no se ve el cambio") porque Vercel seguía sirviendo una versión vieja.
 - **PWA**: instalable (manifest + service worker), con notificaciones push reales (Web Push API + VAPID).
 
@@ -154,50 +154,45 @@ SIGTOC/
         │   ├── push.js               # service worker + suscripción Web Push
         │   └── realtime.js           # suscripción a cambios de orders/app_settings
         ├── styles/
-        │   ├── index.css             # fuentes IBM Plex (@import) + directivas Tailwind + base
-        │   ├── tokens.js             # paleta C {...}, FONT_SANS, FONT_MONO (también expuestos como colores de Tailwind)
+        │   ├── index.css             # fuente Inter (@import) + directivas Tailwind + base (foco, inputs 16px en móvil) + clases .card/.field/.label
+        │   ├── tokens.js             # paleta C {...} y FONT_SANS (expuestos como colores/fuente de Tailwind: bg-surface, text-ink2, bg-critBg…)
         │   └── charts.js             # estilos de recharts (chartFont, chartTooltipStyle)
         ├── constants/stages.js       # STAGES (las 4 etapas) + DEFAULT_SLA
         ├── utils/
-        │   ├── format.js             # nowIso, fmtClock, fmtShort, fmtDuration
-        │   └── sla.js                # slaStatus (alineado con slaState() de la Edge Function)
+        │   ├── format.js             # fmtShort ("9 oct, 09:30"), fmtDay, fmtMinutes ("2 h 20 min"), shortUser
+        │   ├── sla.js                # slaStatus, isAtRisk, sortByRisk (alineado con slaState() de la Edge Function)
+        │   └── reports.js            # cálculos de reportes: periodRange, summarize, dailySeries, topExceeded, recentAnomalies
         └── components/
-            ├── common/StatusPill.jsx
+            ├── ui/                   # piezas base: Button, Badge/SlaBadge/OrderStatusBadge, SlaMeter/StageTrack, Modal, Banner, Toast
+            ├── layout/               # AppShell (barra superior + menú lateral/drawer), AlertBell
             ├── auth/LoginScreen.jsx
-            ├── layout/               # AppHeader, AlertBell
-            ├── dashboard/Dashboard.jsx
             ├── settings/SlaSettingsModal.jsx
-            ├── documents/            # PdfUploader, GuideUploader, DocLink
-            ├── orders/               # OrderDetail, NewOrderModal, CancelBox, Perforation
+            ├── documents/            # FileSlot, PdfUploader, GuideUploader, DocLink
+            ├── orders/               # OrdersPage, OrderDetail, NewOrderModal, CancelBox
             │   └── stages/           # StageForm, StageEditForm, StageDataView, StageHistoryModal, SerialListEditor
-            └── reports/              # ReportsView, KpiCard, ChartCard
+            └── reports/              # ReportsView, KpiCard, ChartCard, StageBars
 ```
 
-**Convención**: los componentes solo se encargan de UI. Cualquier lectura o escritura en Supabase va en `services/`, y colores y tipografías salen de `styles/tokens.js`.
+**Convención**: los componentes solo se encargan de UI. Cualquier lectura o escritura en Supabase va en `services/`. El estilo se escribe con clases de Tailwind usando los tokens del tema; las piezas repetidas (botón, insignia de SLA, barra de consumo, modal) salen de `components/ui/`.
+
+**Sistema visual**: estándar de la categoría con acabado tipo Shopify Polaris / Stripe Dashboard (decisión registrada en `PRODUCT.md`). Barra superior oscura, menú lateral (drawer en móvil), tipografía Inter, estados de SLA siempre con ícono + texto, rojo reservado para "excedido". Maquetas de referencia en `.impeccable/mocks/canon/`.
 
 Qué hace cada componente:
 
-- `StatusPill` — pastilla de estado SLA (en tiempo / por vencer / excedido).
-- `LoginScreen` — login + signup con Supabase Auth (email/password).
-- `NewOrderModal` — crear pedido (solo pide cliente; el SLA ya no se pide aquí, usa el global).
-- `SlaSettingsModal` — editar el SLA global (4 valores en minutos).
-- `Dashboard` — panel principal: KPIs, buscador, lista de pedidos (responsive: se apila en mobile).
-- `Perforation` — detalle visual decorativo (bordes perforados tipo ticket) del encabezado de un pedido.
-- `PdfUploader` — sube PDF a Storage, fuerza `.pdf` (usado en Etapa 1: pedido y RUT).
-- `GuideUploader` — sube PDF o imagen con extensión dinámica (para la guía de envío en Etapa 4).
-- `SerialListEditor` — lista dinámica de seriales (Etapa 2), con soporte de lector de código de barras: al escanear (Enter), salta automáticamente al siguiente campo o crea uno nuevo.
-- `StageForm` — el formulario de la etapa **activa** (la que se está completando ahora mismo).
-- `CancelBox` — "Finalizar por anomalía": motivo obligatorio, visible en cualquier etapa activa.
-- `DocLink` — botón "Ver" que genera signed URL de Supabase Storage y abre el documento.
-- `StageDataView` — vista de solo lectura de los datos de una etapa (usada tanto para la versión actual como para el historial de versiones).
-- `StageEditForm` — formulario de edición de una etapa **ya completada** (crea nueva versión).
-- `StageHistoryModal` — modal que junta `StageDataView` + `StageEditForm` + listado de versiones anteriores. Se abre al hacer clic en una etapa completada del riel.
-- `OrderDetail` — vista de detalle de un pedido: ticket header, riel de 4 etapas (clicable si están completadas), formulario de la etapa activa, auditoría, centro de notificaciones.
-- `KpiCard`, `ChartCard` — piezas del módulo de reportes.
-- `ReportsView` — reportes con rango de fechas, KPIs, 4 gráficas (recharts) y tabla de motivos de cancelación.
-- `AppHeader` — barra superior con logo, campanita y reloj.
-- `AlertBell` — campanita en el header global, con badge rojo de conteo de alertas SLA activas y dropdown para saltar a esos pedidos (responsive: en mobile se muestra como panel fijo, no dropdown flotante).
-- `App` — componente raíz: maneja sesión, carga de `orders`/`app_settings` con Realtime, registro del service worker, suscripción push, deep-link (`?order=ID` abre el pedido directo) y los handlers `handle*` que delegan en `services/`.
+- `AppShell` — barra superior (búsqueda global con Ctrl K, campanita, menú de cuenta) + menú lateral (Pedidos con vistas Todos/En riesgo/Anomalías, Reportes, Configuración de SLA, alertas push). En móvil el menú es un panel deslizable.
+- `AlertBell` — campanita con conteo de pedidos con SLA en riesgo y lista para saltar a ellos.
+- `LoginScreen` — login + signup con Supabase Auth, ver/ocultar contraseña y errores traducidos al español.
+- `OrdersPage` — panel de pedidos: aviso de pedidos en riesgo, tarjetas por etapa (también filtran), pestañas, filtros (etapa —recordado en el dispositivo—, estado de SLA, creador), orden por riesgo; tabla en escritorio y tarjetas en móvil.
+- `OrderDetail` — detalle: encabezado con estado, stepper de 4 etapas (las completadas abren su historial), etapa activa con barra de SLA, auditoría y centro de notificaciones.
+- `StageForm` — formulario de la etapa **activa**; botón de finalizar fijo abajo en móvil y explica qué falta cuando está deshabilitado.
+- `SerialListEditor` — seriales de la Etapa 2 con soporte de lector de código de barras (Enter salta al siguiente campo o crea uno nuevo).
+- `CancelBox` — "Finalizar por anomalía": aislada del botón de avanzar, motivo obligatorio.
+- `StageDataView` / `StageEditForm` / `StageHistoryModal` — ver, corregir (crea nueva versión) e historial de versiones de una etapa completada.
+- `FileSlot`, `PdfUploader`, `GuideUploader`, `DocLink` — subir y ver documentos (PDF del pedido, RUT, guía) con URL firmada.
+- `NewOrderModal` — crear pedido (cliente obligatorio). `SlaSettingsModal` — editar el SLA global con validación.
+- `ReportsView` (+ `KpiCard`, `ChartCard`, `StageBars`) — reportes por período (7/30/90 días) con comparación contra el período anterior: KPIs con tendencia, cumplimiento por etapa vs. meta 80 %, tiempo promedio vs. límite, pedidos por día, pedidos que más excedieron el SLA y motivos de anomalía. Cada gráfica tiene "Ver como tabla".
+- `Toast` — confirmación (o error) de cada acción: crear, finalizar etapa, corregir, cancelar, guardar SLA, push.
+- `App` — componente raíz: sesión, carga de `orders`/`app_settings` con Realtime, navegación (pedidos/reportes), service worker y push, deep-link (`?order=ID`) y los handlers `handle*` que delegan en `services/`.
 
 ### PWA
 - `frontend/public/manifest.json` — nombre SIGTOC, `display: standalone`, íconos del logo real de la empresa (C&C).
@@ -213,7 +208,7 @@ Qué hace cada componente:
 3. **SLA global configurable** (no por pedido individual), con timers en vivo y 3 estados visuales (en tiempo / por vencer / excedido).
 4. **Finalizar por anomalía en cualquier etapa**: motivo obligatorio, queda registrado quién y cuándo.
 5. **Historial y edición versionada de etapas completadas**: se puede ver y corregir lo que se cargó en una etapa ya cerrada, sin perder el dato original (v1, v2, v3...).
-6. **Dashboard multi-pedido** con búsqueda, KPIs, responsive mobile.
+6. **Panel de pedidos** ordenado por riesgo de SLA, con filtros por etapa/estado/creador, búsqueda (también por serial) y vista móvil por tarjetas.
 7. **Módulo de Reportes**: rango de fechas, cumplimiento de SLA por etapa, tiempos promedio vs. límite, distribución de estados, tendencia diaria, motivos de cancelación.
 8. **Centro de notificaciones** (antes "simulación de WhatsApp"): log de hitos por pedido, visible en el detalle.
 9. **Campanita de alertas global** en el header, con contador de pedidos en riesgo de SLA.

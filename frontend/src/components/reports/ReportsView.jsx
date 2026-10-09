@@ -1,212 +1,201 @@
-import React, { useState, useMemo } from "react";
-import { Package, AlertTriangle, ArrowLeft, BarChart3, Timer, ShieldCheck } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, AreaChart, Area, ReferenceLine } from "recharts";
-import { C, FONT_MONO } from "../../styles/tokens";
+import React, { useMemo, useState } from "react";
+import { CalendarDays, BarChart3 } from "lucide-react";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { C } from "../../styles/tokens";
 import { chartFont, chartTooltipStyle } from "../../styles/charts";
+import { fmtShort, fmtDay, fmtMinutes, shortUser } from "../../utils/format";
+import { periodRange, inRange, summarize, dailySeries, topExceeded, recentAnomalies } from "../../utils/reports";
 import { STAGES } from "../../constants/stages";
-import { fmtShort } from "../../utils/format";
+import Badge from "../ui/Badge";
 import KpiCard from "./KpiCard";
 import ChartCard from "./ChartCard";
+import { ComplianceBars, TimeVsLimit } from "./StageBars";
 
-function avg(arr) { if (!arr.length) return 0; return Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10; }
+const PERIODS = [7, 30, 90];
 
-export default function ReportsView({ orders, slaSettings, onBack }) {
-  const [range, setRange] = useState(() => {
-    const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - 30);
-    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
-  });
+function delta(cur, prev, { unit, lowerIsBetter, neutral, pct } = {}) {
+  if (cur === null || prev === null || prev === undefined) return null;
+  const diff = pct ? (prev ? ((cur - prev) / prev) * 100 : null) : cur - prev;
+  if (diff === null || Math.round(diff) === 0) return { text: "sin cambio", tone: "neutral" };
+  const sign = diff > 0 ? "+" : "−";
+  const good = lowerIsBetter ? diff < 0 : diff > 0;
+  return { text: `${sign}${Math.abs(Math.round(diff))}${unit}`, tone: neutral ? "neutral" : good ? "good" : "bad" };
+}
 
-  const filtered = useMemo(() => orders.filter((o) => {
-    const d = o.created_at.slice(0, 10);
-    return d >= range.from && d <= range.to;
-  }), [orders, range]);
+function DayTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div style={chartTooltipStyle}>
+      <p>{fmtDay(d.date)} · {d.created} pedido{d.created !== 1 ? "s" : ""}</p>
+      {d.exceeded > 0 && <p>{d.exceeded} excedió el SLA</p>}
+    </div>
+  );
+}
 
-  const stats = useMemo(() => {
-    const abiertos = filtered.filter((o) => o.status === "abierto").length;
-    const cerrados = filtered.filter((o) => o.status === "cerrado").length;
-    const cancelados = filtered.filter((o) => o.status === "cancelado").length;
+export default function ReportsView({ orders, slaSettings, now: liveNow, onOpenOrder }) {
+  const now = Math.floor(liveNow / 60000) * 60000; // los reportes se recalculan una vez por minuto
+  const [days, setDays] = useState(30);
+  const [compare, setCompare] = useState(true);
+  const [showMore, setShowMore] = useState(false); // celular: reportes secundarios plegados
+  const range = useMemo(() => periodRange(days, now), [days, now]);
 
-    const stageDurations = { 1: [], 2: [], 3: [], 4: [] };
-    const stageCompliance = { 1: { ok: 0, total: 0 }, 2: { ok: 0, total: 0 }, 3: { ok: 0, total: 0 }, 4: { ok: 0, total: 0 } };
+  const data = useMemo(() => {
+    const cur = orders.filter((o) => inRange(o, range.from, range.to));
+    const prev = orders.filter((o) => inRange(o, range.prevFrom, range.prevTo));
+    return {
+      cur, sum: summarize(cur, slaSettings), prevSum: summarize(prev, slaSettings), hasPrev: prev.length > 0,
+      daily: dailySeries(cur, range, slaSettings),
+      top: topExceeded(cur, slaSettings, now),
+      anomalies: recentAnomalies(cur),
+    };
+  }, [orders, slaSettings, range, now]);
 
-    filtered.forEach((o) => {
-      STAGES.forEach((s) => {
-        const st = o.stages[s.id];
-        if (st?.startedAt && st?.completedAt) {
-          const mins = (new Date(st.completedAt) - new Date(st.startedAt)) / 60000;
-          stageDurations[s.id].push(mins);
-          const limit = o.sla_config?.[s.id] ?? slaSettings[s.id] ?? 30;
-          stageCompliance[s.id].total += 1;
-          if (mins <= limit) stageCompliance[s.id].ok += 1;
-        }
-      });
-    });
-
-    const avgDurationData = STAGES.map((s) => ({
-      name: s.short, promedio: avg(stageDurations[s.id]), limite: slaSettings[s.id] ?? 30,
-    }));
-
-    const complianceData = STAGES.map((s) => {
-      const c = stageCompliance[s.id];
-      const pct = c.total ? Math.round((100 * c.ok) / c.total) : null;
-      return { name: s.short, cumplimiento: pct ?? 0, sinDatos: pct === null };
-    });
-
-    let totalCompleted = 0, totalOk = 0;
-    STAGES.forEach((s) => { totalCompleted += stageCompliance[s.id].total; totalOk += stageCompliance[s.id].ok; });
-    const slaCompliancePct = totalCompleted ? Math.round((100 * totalOk) / totalCompleted) : null;
-
-    const flowTimes = filtered.filter((o) => o.status === "cerrado").map((o) => {
-      const start = o.stages[1]?.startedAt, end = o.stages[4]?.completedAt;
-      if (!start || !end) return null;
-      return (new Date(end) - new Date(start)) / 60000;
-    }).filter((v) => v !== null);
-    const avgFlowMin = flowTimes.length ? Math.round(avg(flowTimes)) : null;
-
-    const perDayMap = {};
-    filtered.forEach((o) => {
-      const d = o.created_at.slice(0, 10);
-      perDayMap[d] = (perDayMap[d] || 0) + 1;
-    });
-    const perDayData = Object.entries(perDayMap).sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, count]) => ({ date: date.slice(5), count }));
-
-    const statusData = [
-      { name: "Abiertos", value: abiertos, color: C.steel },
-      { name: "Entregados", value: cerrados, color: C.ok },
-      { name: "Cancelados", value: cancelados, color: C.alert },
-    ].filter((d) => d.value > 0);
-
-    const cancelledList = filtered.filter((o) => o.status === "cancelado" && o.cancel_info)
-      .sort((a, b) => new Date(b.cancel_info.at) - new Date(a.cancel_info.at)).slice(0, 8);
-
-    return { abiertos, cerrados, cancelados, avgDurationData, complianceData, slaCompliancePct, avgFlowMin, perDayData, statusData, cancelledList };
-  }, [filtered, slaSettings]);
+  const { sum, prevSum, daily } = data;
+  const overLimit = sum.stages.filter((st) => st.avgMin !== null && st.avgMin > st.limit);
+  const more = showMore ? "" : "hidden md:block"; // en el celular, plegado hasta "Ver más reportes"
+  const showDelta = compare && data.hasPrev;
+  const tickEvery = Math.max(1, Math.round(daily.length / 4));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-xs font-semibold mb-4" style={{ color: C.inkSoft }}>
-        <ArrowLeft size={14} /> Volver al panel
-      </button>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <h2 className="text-lg font-bold" style={{ color: C.ink, fontFamily: FONT_MONO }}>REPORTES</h2>
-        <div className="flex items-center gap-2 text-xs" style={{ color: C.inkSoft }}>
-          <span>Del</span>
-          <input type="date" value={range.from} max={range.to}
-            onChange={(e) => setRange({ ...range, from: e.target.value })}
-            className="px-2 py-1.5 rounded text-xs outline-none" style={{ border: `1px solid ${C.line}` }} />
-          <span>al</span>
-          <input type="date" value={range.to} min={range.from} max={new Date().toISOString().slice(0, 10)}
-            onChange={(e) => setRange({ ...range, to: e.target.value })}
-            className="px-2 py-1.5 rounded text-xs outline-none" style={{ border: `1px solid ${C.line}` }} />
-        </div>
+    <div className="max-w-[1200px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-3">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <h1 className="text-[20px] font-bold tracking-tight mr-auto w-full sm:w-auto">Reportes</h1>
+        <label className="relative">
+          <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink2 pointer-events-none" />
+          <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Período"
+            className="h-11 sm:h-8 pl-9 pr-3 rounded-lg bg-surface font-semibold shadow-[inset_0_0_0_1px_#E3E3E3,0_1px_0_rgba(0,0,0,.05)] outline-none cursor-pointer">
+            {PERIODS.map((p) => <option key={p} value={p}>Últimos {p} días</option>)}
+          </select>
+        </label>
+        <button onClick={() => setCompare((v) => !v)} aria-pressed={compare}
+          className={`h-11 sm:h-8 px-3 rounded-lg font-semibold ${compare ? "bg-surface text-ink shadow-[inset_0_0_0_1px_#E3E3E3,0_1px_0_rgba(0,0,0,.05)]" : "text-ink2 shadow-[inset_0_0_0_1px_#C9C9C9]"}`}>
+          <span className="sm:hidden">{compare ? "vs. período anterior" : "Comparar"}</span>
+          <span className="hidden sm:inline">{compare ? `Comparando con los ${days} días anteriores` : "Comparar con el período anterior"}</span>
+        </button>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="text-center py-16 rounded-lg" style={{ backgroundColor: C.card, border: `1px dashed ${C.lineStrong}` }}>
-          <BarChart3 size={28} color={C.inkFaint} className="mx-auto mb-2" />
-          <p className="text-sm font-semibold" style={{ color: C.ink }}>Sin pedidos en este rango</p>
-          <p className="text-xs mt-1" style={{ color: C.inkSoft }}>Ajusta las fechas para ver datos.</p>
+      {data.cur.length === 0 ? (
+        <div className="card text-center py-14 px-6">
+          <BarChart3 size={30} className="mx-auto mb-3 text-ink3" />
+          <p className="text-[15px] font-semibold">Sin pedidos en este período</p>
+          <p className="text-ink2 mt-1">Elige un período más largo para ver datos.</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-            <KpiCard icon={Package} label="Pedidos en rango" value={filtered.length} fg={C.steel} />
-            <KpiCard icon={ShieldCheck} label="Cumplimiento SLA" value={stats.slaCompliancePct !== null ? `${stats.slaCompliancePct}%` : "—"} fg={stats.slaCompliancePct >= 80 ? C.ok : stats.slaCompliancePct === null ? C.inkFaint : C.alert} />
-            <KpiCard icon={Timer} label="Tiempo prom. flujo completo" value={stats.avgFlowMin !== null ? `${stats.avgFlowMin} min` : "—"} fg={C.steel} />
-            <KpiCard icon={AlertTriangle} label="Pedidos cancelados" value={stats.cancelados} fg={stats.cancelados > 0 ? C.alert : C.ok} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            <KpiCard label="Cumplimiento de SLA" help="% de etapas completadas dentro de su límite"
+              value={sum.compliance === null ? "—" : `${Math.round(sum.compliance)} %`}
+              delta={showDelta ? delta(sum.compliance, prevSum.compliance, { unit: " pts" }) : null}
+              trend={daily.map((d) => d.compliance)} />
+            <KpiCard label="Tiempo promedio de flujo completo" help="De la creación a la entrega, pedidos entregados"
+              value={sum.avgFlow === null ? "—" : fmtMinutes(sum.avgFlow)}
+              delta={showDelta ? delta(sum.avgFlow, prevSum.avgFlow, { unit: " min", lowerIsBetter: true }) : null}
+              trend={daily.map((d) => d.avgFlow)} />
+            <KpiCard label="Pedidos creados" value={sum.created}
+              delta={showDelta ? delta(sum.created, prevSum.created, { unit: " %", pct: true, neutral: true }) : null}
+              trend={daily.map((d) => d.created)} />
+            <KpiCard label="Finalizados por anomalía" value={sum.anomalies}
+              delta={showDelta ? delta(sum.anomalies, prevSum.anomalies, { unit: "", lowerIsBetter: true }) : null}
+              trend={daily.map((d) => d.anomalies)} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            <ChartCard title="Pedidos creados por día">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats.perDayData}>
-                  <defs>
-                    <linearGradient id="fillDay" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={C.steel} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={C.steel} stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
-                  <XAxis dataKey="date" tick={chartFont} axisLine={{ stroke: C.line }} tickLine={false} />
-                  <YAxis allowDecimals={false} tick={chartFont} axisLine={false} tickLine={false} width={24} />
-                  <Tooltip contentStyle={chartTooltipStyle} />
-                  <Area type="monotone" dataKey="count" name="Pedidos" stroke={C.steel} strokeWidth={2} fill="url(#fillDay)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartCard>
-
-            <ChartCard title="Distribución por estado">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={stats.statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3}>
-                    {stats.statusData.map((d, i) => <Cell key={i} fill={d.color} stroke={C.card} strokeWidth={2} />)}
-                  </Pie>
-                  <Tooltip contentStyle={chartTooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex justify-center gap-4 mt-1">
-                {stats.statusData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-1.5 text-[11px]" style={{ color: C.inkSoft }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: d.color }} />
-                    {d.name} ({d.value})
-                  </div>
-                ))}
-              </div>
-            </ChartCard>
-
-            <ChartCard title="Tiempo promedio por etapa vs. límite SLA (min)">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.avgDurationData} barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
-                  <XAxis dataKey="name" tick={chartFont} axisLine={{ stroke: C.line }} tickLine={false} />
-                  <YAxis tick={chartFont} axisLine={false} tickLine={false} width={28} />
-                  <Tooltip contentStyle={chartTooltipStyle} />
-                  <Bar dataKey="promedio" name="Promedio real" fill={C.steel} radius={[4, 4, 0, 0]} maxBarSize={38} />
-                  <Bar dataKey="limite" name="Límite SLA" fill={C.line} radius={[4, 4, 0, 0]} maxBarSize={38} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-
-            <ChartCard title="Cumplimiento de SLA por etapa (%)">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.complianceData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={C.line} vertical={false} />
-                  <XAxis dataKey="name" tick={chartFont} axisLine={{ stroke: C.line }} tickLine={false} />
-                  <YAxis domain={[0, 100]} tick={chartFont} axisLine={false} tickLine={false} width={28} />
-                  <Tooltip contentStyle={chartTooltipStyle} />
-                  <ReferenceLine y={80} stroke={C.warn} strokeDasharray="4 4" />
-                  <Bar dataKey="cumplimiento" name="% en tiempo" radius={[4, 4, 0, 0]} maxBarSize={44}>
-                    {stats.complianceData.map((d, i) => (
-                      <Cell key={i} fill={d.sinDatos ? C.line : d.cumplimiento >= 80 ? C.ok : d.cumplimiento >= 50 ? C.warn : C.alert} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </div>
-
-          <div className="rounded-lg p-4" style={{ backgroundColor: C.card, border: `1px solid ${C.line}` }}>
-            <h5 className="text-[11px] font-bold uppercase tracking-wide mb-2.5" style={{ color: C.inkSoft }}>
-              Motivos de finalización por anomalía (más recientes)
-            </h5>
-            {stats.cancelledList.length === 0 ? (
-              <p className="text-xs" style={{ color: C.inkFaint }}>No hay cancelaciones en este rango.</p>
+          {/* Celular: lo que más baja el cumplimiento, en una sola tarjeta */}
+          <section className="md:hidden card p-4">
+            <h2 className="text-[15px] font-semibold">Requiere atención</h2>
+            <p className="text-[12.5px] text-ink2 mt-0.5 mb-1">Lo que más está bajando el cumplimiento</p>
+            {overLimit.length === 0 && data.top.length === 0 ? (
+              <p className="text-ink2 py-3">Todas las etapas van dentro de su límite.</p>
             ) : (
-              <div className="space-y-1.5">
-                {stats.cancelledList.map((o) => (
-                  <div key={o.id} className="flex items-start gap-3 text-[11px] px-2.5 py-2 rounded" style={{ backgroundColor: C.paperDark }}>
-                    <span className="font-bold flex-shrink-0" style={{ color: C.steel, fontFamily: FONT_MONO }}>{o.id}</span>
-                    <span className="flex-1" style={{ color: C.ink }}>{o.cancel_info.reason}</span>
-                    <span className="flex-shrink-0" style={{ color: C.inkFaint }}>{o.cancel_info.by} · {fmtShort(o.cancel_info.at)}</span>
-                  </div>
+              <ul>
+                {overLimit.map((st) => (
+                  <li key={st.id} className="flex justify-between items-center gap-3 py-3 border-t border-line2 first:border-0 text-[14px]">
+                    <span>{st.name} promedia <b className="font-semibold num">{Math.round(st.avgMin)} de {st.limit} min</b></span>
+                    <Badge tone="warning">Sobre límite</Badge>
+                  </li>
                 ))}
-              </div>
+                {data.top.slice(0, 2).map((r) => (
+                  <li key={r.order.id} className="flex justify-between items-center gap-3 py-3 border-t border-line2 first:border-0 text-[14px]">
+                    <span className="min-w-0 truncate"><button onClick={() => onOpenOrder(r.order.id)} className="font-semibold text-link num">{r.order.id}</button> · {r.stage}</span>
+                    <Badge tone={r.running ? "warning" : "critical"}>+{fmtMinutes(r.over)}</Badge>
+                  </li>
+                ))}
+              </ul>
             )}
+          </section>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <ChartCard title="Cumplimiento de SLA por etapa" subtitle="% de etapas completadas dentro del límite · meta 80 %"
+              table={{ head: ["Etapa", "Cumplimiento", "Etapas medidas"], rows: sum.stages.map((s) => [s.name, s.compliance === null ? "Sin datos" : `${Math.round(s.compliance)} %`, s.samples]) }}>
+              <ComplianceBars stages={sum.stages} />
+            </ChartCard>
+            <ChartCard className={more} title="Tiempo promedio vs. límite por etapa" subtitle="Minutos · la línea vertical es el límite de SLA de cada etapa"
+              table={{ head: ["Etapa", "Promedio", "Límite"], rows: sum.stages.map((s) => [s.name, s.avgMin === null ? "Sin datos" : fmtMinutes(s.avgMin), `${s.limit} min`]) }}>
+              <TimeVsLimit stages={sum.stages} />
+            </ChartCard>
           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <ChartCard className={more} title="Pedidos creados por día" subtitle={`Últimos ${days} días`}
+              table={{ head: ["Día", "Pedidos", "Excedieron el SLA"], rows: daily.filter((d) => d.created).map((d) => [fmtDay(d.date), d.created, d.exceeded]) }}>
+              <div className="h-[200px] -ml-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={daily} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                    <CartesianGrid stroke={C.line2} vertical={false} />
+                    <XAxis dataKey="date" tickFormatter={fmtDay} interval={tickEvery - 1} tick={chartFont} axisLine={{ stroke: C.line }} tickLine={false} minTickGap={16} tickMargin={8} />
+                    <YAxis allowDecimals={false} tick={chartFont} axisLine={false} tickLine={false} width={28} />
+                    <Tooltip content={<DayTooltip />} cursor={{ stroke: "#B5B5B5" }} />
+                    <Area type="linear" dataKey="created" stroke={C.series} strokeWidth={2} fill={C.series} fillOpacity={0.1}
+                      activeDot={{ r: 4.5, fill: C.series, stroke: "#fff", strokeWidth: 2 }} isAnimationActive={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </ChartCard>
+
+            <ChartCard className={more} title="Pedidos que más excedieron el SLA" subtitle="Tiempo sobre el límite en la etapa donde se atascaron">
+              {data.top.length === 0 ? (
+                <p className="text-ink2 py-6 text-center">Ningún pedido excedió su SLA en este período.</p>
+              ) : (
+                <table className="w-full text-[13.5px] sm:text-[13px] num">
+                  <thead><tr className="text-left text-[12px] text-ink2">
+                    <th className="font-semibold bg-surface2 px-2.5 py-2 border-b border-line2">Pedido</th>
+                    <th className="font-semibold bg-surface2 px-2.5 py-2 border-b border-line2">Etapa</th>
+                    <th className="font-semibold bg-surface2 px-2.5 py-2 border-b border-line2 whitespace-nowrap">Sobre el límite</th>
+                  </tr></thead>
+                  <tbody>
+                    {data.top.map((r) => (
+                      <tr key={r.order.id} className="border-b border-line2 last:border-0">
+                        <td className="px-2.5 py-2.5 whitespace-nowrap"><button onClick={() => onOpenOrder(r.order.id)} className="font-semibold text-link hover:underline text-left">{r.order.id}</button></td>
+                        <td className="px-2.5 py-2.5">{r.stage}</td>
+                        <td className="px-2.5 py-2.5 whitespace-nowrap"><Badge tone={r.running ? "warning" : "critical"}>+{fmtMinutes(r.over)}{r.running ? " · en curso" : ""}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </ChartCard>
+          </div>
+
+          <ChartCard className={more} title="Motivos de finalización por anomalía" subtitle={`${sum.anomalies} en el período · más recientes primero`}>
+            {data.anomalies.length === 0 ? (
+              <p className="text-ink2 py-4 text-center">No hubo anomalías en este período.</p>
+            ) : (
+              <ul>
+                {data.anomalies.map((o) => (
+                  <li key={o.id} className="grid sm:grid-cols-[200px_1fr_120px_200px] gap-x-4 gap-y-0.5 py-2.5 border-b border-line2 last:border-0 text-[13.5px] sm:text-[13px]">
+                    <button onClick={() => onOpenOrder(o.id)} className="font-semibold text-link hover:underline text-left num">{o.id}</button>
+                    <span>{o.cancel_info.reason}</span>
+                    <span className="text-ink2">{STAGES[o.current_stage - 1].short}</span>
+                    <span className="text-ink2 num">{shortUser(o.cancel_info.by)} · {fmtShort(o.cancel_info.at)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ChartCard>
+
+          <button onClick={() => setShowMore((v) => !v)} className="md:hidden w-full h-12 card font-semibold text-link">
+            {showMore ? "Ver menos" : "Ver más reportes"}
+          </button>
         </>
       )}
     </div>
