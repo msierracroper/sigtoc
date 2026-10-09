@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Search, ArrowUpDown, Package, AlertCircle, AlertTriangle, SlidersHorizontal, ChevronRight } from "lucide-react";
 import { STAGES } from "../../constants/stages";
 import { sortByRisk, isAtRisk } from "../../utils/sla";
-import { fmtShort, fmtMinutes, shortUser } from "../../utils/format";
+import { fmtShort, fmtMinutes, fmtElapsed, shortUser } from "../../utils/format";
 import Button from "../ui/Button";
 import Badge, { OrderStatusBadge } from "../ui/Badge";
 import Banner from "../ui/Banner";
@@ -45,7 +45,7 @@ function TimeCell({ order, sla }) {
   if (!sla) return <span className="text-ink3">—</span>;
   return (
     <div className="flex flex-col gap-1.5 w-[150px]">
-      <span><b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : ""}`}>{Math.floor(sla.elapsedMin)}</b> de {sla.limitMin} min</span>
+      <span><b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : ""}`}>{fmtElapsed(sla.elapsedMin)}</b> de {sla.limitMin} min</span>
       <SlaMeter sla={sla} />
     </div>
   );
@@ -277,7 +277,7 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
                     <span className="col-span-2 text-[13.5px] text-ink2 truncate">{o.cliente}</span>
                     <span className="col-span-2 flex justify-between items-center mt-1.5 text-[13.5px] text-ink2">
                       <span>{stageLabel(o)}</span>
-                      {sla && <span><b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : "text-ink"}`}>{Math.floor(sla.elapsedMin)}</b> de {sla.limitMin} min</span>}
+                      {sla && <span><b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : "text-ink"}`}>{fmtElapsed(sla.elapsedMin)}</b> de {sla.limitMin} min</span>}
                     </span>
                     {sla && <SlaMeter sla={sla} className="col-span-2 mt-0.5" />}
                   </button>

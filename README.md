@@ -191,6 +191,7 @@ Qué hace cada componente:
 - `FileSlot`, `PdfUploader`, `GuideUploader`, `DocLink` — subir y ver documentos (PDF del pedido, RUT, guía) con URL firmada.
 - `NewOrderModal` — crear pedido (cliente obligatorio). `SlaSettingsModal` — editar el SLA global con validación.
 - `ReportsView` (+ `KpiCard`, `ChartCard`, `StageBars`) — reportes por período (7/30/90 días) con comparación contra el período anterior: KPIs con tendencia, cumplimiento por etapa vs. meta 80 %, tiempo promedio vs. límite, pedidos por día, pedidos que más excedieron el SLA y motivos de anomalía. Cada gráfica tiene "Ver como tabla".
+- `BoardView` — **tablero para TV** en `/tablero` (todas las etapas) o `/tablero?etapa=ingreso|bodega|facturacion|despacho` (una TV por área). Solo lectura, estilo aeropuerto: fondo oscuro, letra escalada a la pantalla, orden por riesgo, paginación automática cada 10 s, pantalla siempre encendida y recarga de datos cada 30 s. Se abre desde el menú lateral ("Tablero para TV"). `vercel.json` reescribe las rutas a `index.html` para que `/tablero` funcione en Vercel.
 - `Toast` — confirmación (o error) de cada acción: crear, finalizar etapa, corregir, cancelar, guardar SLA, push.
 - `App` — componente raíz: sesión, carga de `orders`/`app_settings` con Realtime, navegación (pedidos/reportes), service worker y push, deep-link (`?order=ID`) y los handlers `handle*` que delegan en `services/`.
 

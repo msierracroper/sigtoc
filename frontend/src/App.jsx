@@ -14,6 +14,11 @@ import NewOrderModal from "./components/orders/NewOrderModal";
 import ReportsView from "./components/reports/ReportsView";
 import SlaSettingsModal from "./components/settings/SlaSettingsModal";
 import Toast from "./components/ui/Toast";
+import BoardView from "./components/board/BoardView";
+
+// Modo tablero (TV): /tablero o /tablero?etapa=bodega
+const IS_BOARD = window.location.pathname.replace(/\/+$/, "") === "/tablero";
+const BOARD_REFRESH_MS = 30000; // respaldo: la TV recarga los pedidos aunque Realtime no esté activo
 
 // Esqueleto mientras se valida la sesión: misma estructura que la app, sin saltos al cargar
 function LoadingShell() {
@@ -47,6 +52,7 @@ export default function App() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [toast, setToast] = useState(null);
   const [now, setNow] = useState(Date.now());
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   const notify = useCallback((message, tone = "success") => setToast({ message, tone, id: Date.now() }), []);
   const closeToast = useCallback(() => setToast(null), []);
@@ -94,7 +100,7 @@ export default function App() {
 
   async function loadOrders() {
     const data = await ordersApi.fetchOrders();
-    if (data) setOrders(data);
+    if (data) { setOrders(data); setLastUpdate(Date.now()); }
   }
 
   async function loadSlaSettings() {
@@ -106,7 +112,9 @@ export default function App() {
     if (!session) return;
     loadOrders();
     loadSlaSettings();
-    return subscribeToChanges({ onOrders: loadOrders, onSettings: loadSlaSettings });
+    const unsubscribe = subscribeToChanges({ onOrders: loadOrders, onSettings: loadSlaSettings });
+    const poll = IS_BOARD ? setInterval(() => { loadOrders(); loadSlaSettings(); }, BOARD_REFRESH_MS) : null;
+    return () => { unsubscribe(); if (poll) clearInterval(poll); };
   }, [session]);
 
   function openOrder(id) { setPage("orders"); setSelectedId(id); window.scrollTo(0, 0); }
@@ -164,6 +172,11 @@ export default function App() {
 
   if (!session) {
     return <LoginScreen onAuthed={setSession} />;
+  }
+
+  if (IS_BOARD) {
+    return <BoardView orders={orders} slaSettings={slaSettings} now={now} lastUpdate={lastUpdate}
+      onExit={() => { window.location.href = "/"; }} />;
   }
 
   const selected = orders.find((o) => o.id === selectedId);

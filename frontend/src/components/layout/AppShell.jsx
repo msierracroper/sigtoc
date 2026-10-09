@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Layers, BarChart3, Clock3, Bell, BellOff, Search, Menu, X, LogOut } from "lucide-react";
+import { Layers, BarChart3, Clock3, Bell, BellOff, Search, Menu, X, LogOut, MonitorPlay } from "lucide-react";
 import AlertBell from "./AlertBell";
 
 export const ORDER_VIEWS = [
@@ -53,6 +53,7 @@ export default function AppShell({
       ))}
       <NavItem icon={BarChart3} label="Reportes" active={page === "reports"} onClick={() => go("reports")} />
       <NavItem icon={Clock3} label="Configuración de SLA" onClick={() => { onOpenSla(); setDrawer(false); }} />
+      <NavItem icon={MonitorPlay} label="Tablero para TV" onClick={() => { window.open("/tablero", "_blank", "noopener"); setDrawer(false); }} />
       <div className="mt-auto pt-3">
         <button onClick={onTogglePush}
           className="w-full h-10 sm:h-8 rounded-lg flex items-center gap-2.5 px-2.5 text-[14px] sm:text-[13px] font-semibold text-[#303030] hover:bg-black/[.04]">

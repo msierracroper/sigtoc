@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ChevronLeft, CheckCircle2, AlertTriangle, ClipboardList, Bell } from "lucide-react";
 import { STAGES } from "../../constants/stages";
-import { fmtShort, fmtMinutes, shortUser } from "../../utils/format";
+import { fmtShort, fmtMinutes, fmtElapsed, shortUser } from "../../utils/format";
 import { slaStatus } from "../../utils/sla";
 import { OrderStatusBadge } from "../ui/Badge";
 import Button from "../ui/Button";
@@ -90,7 +90,7 @@ export default function OrderDetail({ order, now, slaSettings, onBack, onFinaliz
                 {sla && (
                   <div className="mt-3 num">
                     <div className="flex justify-between text-[13.5px] mb-1.5">
-                      <span className="text-ink2"><b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : "text-ink"}`}>{Math.floor(sla.elapsedMin)}</b> de {sla.limitMin} min en la etapa</span>
+                      <span className="text-ink2"><b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : "text-ink"}`}>{fmtElapsed(sla.elapsedMin)}</b> de {sla.limitMin} min en la etapa</span>
                       <span className={`font-semibold ${sla.state === "excedido" ? "text-crit" : sla.state === "alerta" ? "text-warn" : "text-ok"}`}>
                         {sla.state === "excedido" ? `Excedido por ${fmtMinutes(-sla.remainingMin)}` : `Quedan ${fmtMinutes(sla.remainingMin)}`}
                       </span>
