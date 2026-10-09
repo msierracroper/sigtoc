@@ -5,3 +5,7 @@ dist
 
 # Caché local de la Supabase CLI
 backend/supabase/.temp
+
+# Impeccable: artefactos locales (capturas, estado de la página de decisión)
+.impeccable/review/
+.impeccable/questions/

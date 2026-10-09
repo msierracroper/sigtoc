@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=390"><title>SIGTOC · Andon · móvil bodega</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{--ground:#EEF1EF;--rail:#1F2428;--ink:#1B2024;--ink2:#56606A;--ink3:#8A939B;--line:#D9DEDB;--ok:#18A058;--warn:#F2A900;--warnbg:#FDF3D6;--warnink:#8A5F00;--bad:#E0362C;--act:#2F6FDB}
+*{box-sizing:border-box;margin:0}
+body{width:390px;height:844px;overflow:hidden;background:var(--ground);font-family:Archivo,sans-serif;color:var(--ink);display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+.status{height:44px;background:var(--rail)}
+.lamps{display:grid;grid-template-columns:repeat(4,1fr);background:var(--rail);padding:0 12px 12px;gap:6px}
+.l{border-radius:8px;padding:7px 8px;font-size:11.5px;font-weight:700;color:#fff;display:flex;justify-content:space-between}
+.l.dim{background:#2E353B;color:#AEB6BD}.l.on{background:var(--warn);color:#2B1E00;outline:2px solid #fff;outline-offset:1px}
+.hd{padding:16px 16px 10px;background:#fff;border-bottom:1px solid var(--line)}
+.back{font-size:14px;color:var(--ink2);display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:baseline}
+h1{font-size:22px;font-weight:780;font-stretch:110%}
+.who{font-size:14.5px;color:var(--ink2);margin-top:2px}
+.timer{margin-top:12px;background:var(--warnbg);border-radius:12px;padding:10px 12px}
+.timer .row b{font-size:20px;color:var(--warnink);font-weight:800}
+.timer .row span{font-size:13.5px;color:var(--warnink);font-weight:600}
+.bar{height:8px;border-radius:9px;background:#F4E2AE;margin-top:8px}.bar s{display:block;width:84%;height:100%;border-radius:9px;background:var(--warn)}
+.body{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px}
+.lab{font-size:13px;font-weight:700;color:var(--ink2);letter-spacing:.02em}
+.sn{height:52px;background:#fff;border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;padding:0 14px;gap:10px;font-size:17px;font-weight:650}
+.sn svg{flex:none}
+.sn .x{margin-left:auto;width:44px;height:44px;display:grid;place-items:center;color:var(--ink3)}
+.scan{height:56px;background:#fff;border:2px solid var(--act);border-radius:12px;display:flex;align-items:center;padding:0 14px;gap:10px;font-size:17px;color:var(--ink3)}
+.hint{font-size:13.5px;color:var(--ink2)}
+.nos{height:48px;border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:15px;color:var(--ink2);gap:10px}
+.sw{width:42px;height:26px;border-radius:99px;background:#D3D9D6;position:relative;margin-left:auto}.sw::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.foot{padding:12px 16px 26px;background:#fff;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.go{height:56px;border-radius:14px;background:var(--act);color:#fff;font-size:17px;font-weight:720;display:flex;align-items:center;justify-content:center;gap:8px}
+.anom{height:40px;border-radius:12px;border:1px solid #E7B4AF;color:#B2281F;font-size:14.5px;font-weight:650;display:grid;place-items:center}
+</style></head><body>
+<div class="status"></div>
+<div class="lamps"><span class="l dim">Ingreso <b>1</b></span><span class="l on">Bodega <b>2</b></span><span class="l dim">Factura <b>1</b></span><span class="l dim">Despacho <b>1</b></span></div>
+<div class="hd">
+  <div class="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 6-6 6 6 6"/></svg>Cola de bodega · 2 pedidos</div>
+  <div class="row"><h1>PED-0042-P9Q</h1></div>
+  <div class="who">Ferretería El Tornillo</div>
+  <div class="timer"><div class="row"><b>7 min restantes</b><span>38 de 45 min</span></div><div class="bar"><s></s></div></div>
+</div>
+<div class="body">
+  <span class="lab">SERIALES ESCANEADOS · 2</span>
+  <div class="sn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18A058" stroke-width="2.6"><path d="m5 12 5 5 9-10"/></svg>SN-88213-A<span class="x"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="sn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18A058" stroke-width="2.6"><path d="m5 12 5 5 9-10"/></svg>SN-88214-A<span class="x"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="scan"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F6FDB" stroke-width="2"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg>Escanea el siguiente serial</div>
+  <span class="hint">Cada lectura se agrega sola y deja el campo listo para la siguiente.</span>
+  <div class="nos">Este pedido no lleva seriales<span class="sw"></span></div>
+</div>
+<div class="foot">
+  <div class="go">Finalizar bodega<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Facturación</div>
+  <div class="anom">No se puede continuar · reportar anomalía</div>
+</div>
+</body></html>

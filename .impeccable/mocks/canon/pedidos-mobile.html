@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=390"><title>SIGTOC · Pedidos (celular)</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+body{width:390px;font-size:14.5px}
+.topbar{height:52px;padding:0 12px;gap:10px}
+.page{padding:14px 12px 28px;display:flex;flex-direction:column;gap:12px}
+.ph{display:flex;align-items:center}
+.ph h1{font-size:20px;font-weight:700}
+.ph .btn{margin-left:auto;height:36px;font-size:14px}
+.banner{padding:12px}
+.banner p{font-size:14px}
+.chips{display:flex;gap:6px;overflow:hidden;margin:0 -12px;padding:0 12px}
+.chip{height:34px;padding:0 12px;border-radius:99px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;gap:6px;font-weight:600;font-size:13.5px;white-space:nowrap;color:var(--ink2)}
+.chip.on{background:var(--ink);color:#fff;box-shadow:none}
+.chip em{font-style:normal;font-size:12px;opacity:.75}
+.search{height:44px;border-radius:10px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink3);font-size:16px}
+.list{overflow:hidden}
+.row{padding:14px;border-bottom:1px solid var(--line2);display:grid;grid-template-columns:1fr auto;gap:4px 10px}
+.row:last-child{border-bottom:0}
+.oid{font-weight:650;font-size:15px}
+.cli{color:var(--ink2);font-size:13.5px;grid-column:1/-1;margin-top:-2px}
+.meta{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:13.5px;color:var(--ink2)}
+.meta b{color:var(--ink);font-weight:650}
+.meter{grid-column:1/-1;margin-top:2px}
+.over{color:var(--crit)!important}
+.more{padding:14px;text-align:center;color:var(--link);font-weight:600}
+</style></head><body>
+<header class="topbar">
+  <span class="tb-icon" style="color:#fff"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+  <div class="brand"><i>S</i>SIGTOC</div>
+  <div style="margin-left:auto;display:flex;gap:4px;align-items:center">
+    <span class="tb-icon"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+    <span class="tb-icon"><svg class="i" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><b>2</b></span>
+  </div>
+</header>
+<div class="page num">
+  <div class="ph"><h1>Pedidos</h1><span class="btn primary"><svg class="i" viewBox="0 0 24 24" style="width:16px"><path d="M12 5v14M5 12h14"/></svg>Crear</span></div>
+  <div class="banner"><svg class="i ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><div><p><b>2 pedidos en riesgo.</b> 1 excedido en Facturación, 1 vence en 7 min en Bodega.</p></div></div>
+  <div class="chips"><span class="chip">Todas</span><span class="chip">Ingreso <em>1</em></span><span class="chip on">Bodega <em>2</em></span><span class="chip">Facturación <em>1</em></span><span class="chip">Despacho <em>1</em></span></div>
+  <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Buscar o escanear pedido</div>
+  <div class="card list">
+    <div class="row"><span class="oid">PED-2026-0042-P9Q</span><span class="badge b-warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Vence en 7 min</span><span class="cli">Ferretería El Tornillo</span><div class="meta"><span>Bodega · verificar seriales</span><span><b>38</b> de 45 min</span></div><div class="meter m-warn"><s style="width:84%"></s></div></div>
+    <div class="row"><span class="oid">PED-2026-0045-H1W</span><span class="badge b-ok">En tiempo</span><span class="cli">Comercializadora Bogotá Norte</span><div class="meta"><span>Bodega · verificar seriales</span><span><b>12</b> de 45 min</span></div><div class="meter m-ok"><s style="width:27%"></s></div></div>
+  </div>
+  <p class="note" style="text-align:center">Filtro de etapa guardado en este dispositivo · <span class="link">Ver todas las etapas</span></p>
+</div>
+</body></html>

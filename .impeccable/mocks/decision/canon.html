@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>SIGTOC · Estándar</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:#F6F7F9;font-family:Inter,sans-serif;color:#111827;display:flex;font-variant-numeric:tabular-nums}
+aside{width:232px;background:#fff;border-right:1px solid #E5E7EB;padding:20px 14px;display:flex;flex-direction:column;gap:2px}
+.brand{font-weight:700;font-size:17px;padding:4px 10px 18px}
+.it{padding:9px 10px;border-radius:8px;font-size:14px;color:#4B5563;font-weight:500}
+.it.on{background:#EFF4FF;color:#1D4ED8;font-weight:600}
+main{flex:1;padding:28px 32px}
+.top{display:flex;align-items:center;margin-bottom:22px}
+h1{font-size:22px;font-weight:700}
+.btn{margin-left:auto;background:#2563EB;color:#fff;font-weight:600;font-size:14px;padding:10px 16px;border-radius:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.k{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:16px}
+.k p{font-size:13px;color:#6B7280}.k b{display:block;font-size:26px;margin-top:6px}
+.bar{display:flex;gap:10px;margin-bottom:14px}
+.f{border:1px solid #D1D5DB;background:#fff;border-radius:8px;padding:8px 12px;font-size:13.5px;color:#374151}
+.s{flex:1;max-width:320px;color:#9CA3AF}
+table{width:100%;background:#fff;border:1px solid #E5E7EB;border-radius:12px;border-collapse:separate;border-spacing:0;overflow:hidden}
+th{text-align:left;font-size:12.5px;color:#6B7280;font-weight:600;padding:12px 16px;background:#F9FAFB;border-bottom:1px solid #E5E7EB}
+td{padding:14px 16px;font-size:14px;border-bottom:1px solid #F1F2F4}
+.b{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:99px}
+.red{background:#FEE2E2;color:#B91C1C}.amb{background:#FEF3C7;color:#92400E}.grn{background:#DCFCE7;color:#166534}.gry{background:#F3F4F6;color:#4B5563}
+</style></head><body>
+<aside><div class="brand">SIGTOC</div><div class="it on">Pedidos</div><div class="it">Reportes</div><div class="it">Configuración SLA</div><div class="it">Usuarios</div></aside>
+<main>
+  <div class="top"><h1>Pedidos</h1><span class="btn">+ Nuevo pedido</span></div>
+  <div class="kpis"><div class="k"><p>Abiertos</p><b>5</b></div><div class="k"><p>Alertas SLA</p><b style="color:#B91C1C">2</b></div><div class="k"><p>Entregados hoy</p><b>1</b></div><div class="k"><p>Cumplimiento 30 d</p><b>83 %</b></div></div>
+  <div class="bar"><span class="f s">Buscar pedido o cliente</span><span class="f">Etapa: todas ▾</span><span class="f">Estado: abiertos ▾</span><span class="f">Orden: riesgo SLA ▾</span></div>
+  <table>
+    <tr><th>Pedido</th><th>Cliente</th><th>Etapa</th><th>Tiempo en etapa</th><th>SLA</th><th>Creado</th></tr>
+    <tr><td>PED-2026-0043-Z7R</td><td>Electrodomésticos del Caribe Ltda.</td><td>Facturación</td><td>26 de 20 min</td><td><span class="b red">Excedido</span></td><td>9 oct, 09:30</td></tr>
+    <tr><td>PED-2026-0042-P9Q</td><td>Ferretería El Tornillo</td><td>Bodega</td><td>38 de 45 min</td><td><span class="b amb">Por vencer</span></td><td>9 oct, 09:58</td></tr>
+    <tr><td>PED-2026-0045-H1W</td><td>Comercializadora Bogotá Norte</td><td>Bodega</td><td>12 de 45 min</td><td><span class="b grn">En tiempo</span></td><td>9 oct, 10:24</td></tr>
+    <tr><td>PED-2026-0044-B4T</td><td>Supermercados La Económica</td><td>Despacho</td><td>22 de 60 min</td><td><span class="b grn">En tiempo</span></td><td>9 oct, 08:54</td></tr>
+    <tr><td>PED-2026-0041-K2M</td><td>Distribuidora Andina SAS</td><td>Ingreso</td><td>8 de 30 min</td><td><span class="b grn">En tiempo</span></td><td>9 oct, 11:08</td></tr>
+    <tr><td>PED-2026-0039-M3D</td><td>Tiendas Mundo Hogar</td><td>—</td><td>—</td><td><span class="b gry">Entregado</span></td><td>9 oct, 04:16</td></tr>
+  </table>
+</main>
+</body></html>

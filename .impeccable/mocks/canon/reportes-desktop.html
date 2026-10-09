@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>SIGTOC · Reportes (escritorio)</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+body{width:1440px}
+.shell{display:flex;min-height:1180px}
+nav.side{width:240px;padding:12px 10px;display:flex;flex-direction:column;gap:1px;background:#EBEBEB}
+.ws{display:flex;align-items:center;gap:9px;padding:8px 8px 14px;font-weight:650}
+.ws span{width:28px;height:28px;border-radius:8px;background:#fff;display:grid;place-items:center;box-shadow:0 1px 2px rgba(0,0,0,.1);font-size:12px}
+.nv{height:32px;border-radius:8px;display:flex;align-items:center;gap:9px;padding:0 9px;color:#303030;font-weight:550}
+.nv.on{background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+.nv .count{margin-left:auto;font-size:12px;font-weight:600;color:var(--crit);background:var(--critbg);border-radius:6px;padding:0 6px}
+main{flex:1;padding:22px 32px 40px;min-width:0}
+.ph{display:flex;align-items:center;gap:8px;margin-bottom:18px}
+.ph h1{font-size:20px;font-weight:700;margin-right:auto}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.kpi{padding:14px 16px 12px;min-width:0}
+.kpi .l{color:var(--ink2);font-weight:550;text-decoration:underline dotted #B5B5B5;text-underline-offset:3px}
+.kpi .v{font-size:26px;font-weight:650;letter-spacing:-.02em;margin-top:4px;display:flex;align-items:baseline;gap:8px}
+.kpi .d{font-size:12.5px;font-weight:600}
+.up{color:var(--ok)}.down{color:var(--crit)}
+.kpi svg.spark{display:block;margin-top:8px;overflow:visible}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.panel{padding:16px}
+.panel h2{font-size:14px;font-weight:650}
+.panel .sub{color:var(--ink2);font-size:12.5px;margin:2px 0 14px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:Inter,sans-serif;font-size:11.5px;fill:#616161}
+table{width:100%;border-collapse:collapse}
+th{font-size:12px;font-weight:600;color:var(--ink2);text-align:left;padding:8px 10px;background:var(--surface2);border-bottom:1px solid var(--line2)}
+td{padding:10px;border-bottom:1px solid var(--line2)}
+tr:last-child td{border-bottom:0}
+.tip{position:absolute;background:#1A1A1A;color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;box-shadow:0 4px 12px rgba(0,0,0,.2);white-space:nowrap}
+</style></head><body>
+<header class="topbar">
+  <div class="brand"><i>S</i>SIGTOC</div>
+  <div class="gsearch" style="width:480px;margin-left:120px"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Buscar pedidos, clientes o seriales<span class="kbd">Ctrl K</span></div>
+  <div style="margin-left:auto;display:flex;gap:6px;align-items:center"><span class="tb-icon"><svg class="i" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><b>2</b></span><span class="avatar">LG</span></div>
+</header>
+<div class="shell">
+  <nav class="side">
+    <div class="ws"><span>C&C</span>Operación</div>
+    <div class="nv"><svg class="i" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/></svg>Pedidos<span class="count">2</span></div>
+    <div class="nv on"><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Reportes</div>
+    <div class="nv"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>Configuración de SLA</div>
+  </nav>
+  <main class="num">
+    <div class="ph"><h1>Reportes</h1>
+      <span class="btn secondary"><svg class="i" viewBox="0 0 24 24" style="width:16px"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Últimos 30 días</span>
+      <span class="btn secondary">Comparar con: 30 días anteriores</span>
+      <span class="btn secondary">Todas las etapas</span>
+    </div>
+    <div class="kpis">
+      <div class="card kpi"><div class="l">Cumplimiento de SLA</div><div class="v">83 %<span class="d up">+5 pts</span></div><svg class="spark" width="100%" height="34" viewBox="0 0 300 34" preserveAspectRatio="none"><polyline fill="none" stroke="#C9CCE8" stroke-width="2" stroke-linejoin="round" points="0,24 25,22 50,26 75,20 100,21 125,18 150,22 175,17 200,15 225,18 250,13 275,12 300,10"/><polyline fill="none" stroke="#4F5FD6" stroke-width="2" points="250,13 275,12 300,10"/><circle cx="300" cy="10" r="4" fill="#4F5FD6" stroke="#fff" stroke-width="2"/></svg></div>
+      <div class="card kpi"><div class="l">Tiempo promedio de flujo completo</div><div class="v">2 h 20 min<span class="d up">−14 min</span></div><svg class="spark" width="100%" height="34" viewBox="0 0 300 34" preserveAspectRatio="none"><polyline fill="none" stroke="#C9CCE8" stroke-width="2" stroke-linejoin="round" points="0,8 25,10 50,9 75,14 100,12 125,15 150,13 175,18 200,17 225,20 250,19 275,22 300,23"/><circle cx="300" cy="23" r="4" fill="#4F5FD6" stroke="#fff" stroke-width="2"/></svg></div>
+      <div class="card kpi"><div class="l">Pedidos creados</div><div class="v">142<span class="d" style="color:var(--ink2)">+9 %</span></div><svg class="spark" width="100%" height="34" viewBox="0 0 300 34" preserveAspectRatio="none"><polyline fill="none" stroke="#C9CCE8" stroke-width="2" stroke-linejoin="round" points="0,20 25,16 50,22 75,14 100,18 125,12 150,19 175,15 200,11 225,17 250,13 275,9 300,14"/><circle cx="300" cy="14" r="4" fill="#4F5FD6" stroke="#fff" stroke-width="2"/></svg></div>
+      <div class="card kpi"><div class="l">Finalizados por anomalía</div><div class="v">6<span class="d down">+2</span></div><svg class="spark" width="100%" height="34" viewBox="0 0 300 34" preserveAspectRatio="none"><polyline fill="none" stroke="#C9CCE8" stroke-width="2" stroke-linejoin="round" points="0,28 25,28 50,22 75,28 100,28 125,22 150,28 175,16 200,28 225,22 250,28 275,16 300,22"/><circle cx="300" cy="22" r="4" fill="#4F5FD6" stroke="#fff" stroke-width="2"/></svg></div>
+    </div>
+    <div class="grid2">
+      <div class="card panel" style="position:relative">
+        <h2>Cumplimiento de SLA por etapa</h2><div class="sub">% de etapas completadas dentro del límite · meta 80 %</div>
+        <svg width="532" height="196" viewBox="0 0 532 196">
+          <line x1="110" y1="0" x2="110" y2="172" stroke="#E3E3E3"/><line x1="430" y1="0" x2="430" y2="172" stroke="#E3E3E3"/>
+          <line x1="366" y1="0" x2="366" y2="172" stroke="#8A8A8A" stroke-width="1"/><text x="366" y="190" text-anchor="middle">meta 80 %</text>
+          <text x="0" y="28">Ingreso</text><path d="M110 14h296a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H110z" fill="#29845A"/><text x="418" y="28" style="fill:#202223;font-weight:600">94 %</text>
+          <text x="0" y="70">Bodega</text><path d="M110 56h262a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H110z" fill="#29845A"/><text x="384" y="70" style="fill:#202223;font-weight:600">83 %</text>
+          <text x="0" y="112">Facturación</text><path d="M110 98h189a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H110z" fill="#E8A200"/><text x="311" y="112" style="fill:#202223;font-weight:600">60 %</text>
+          <text x="0" y="154">Despacho</text><path d="M110 140h282a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H110z" fill="#29845A"/><text x="404" y="154" style="fill:#202223;font-weight:600">89 %</text>
+          <text x="110" y="190" text-anchor="middle">0 %</text><text x="430" y="190" text-anchor="middle">100 %</text>
+        </svg>
+        <div class="legend" style="margin:6px 0 0"><span><i style="background:#29845A"></i>Sobre la meta</span><span><i style="background:#E8A200"></i>Bajo la meta</span><span><i style="background:#E51C00"></i>Bajo 50 %</span></div>
+      </div>
+      <div class="card panel" style="position:relative">
+        <h2>Tiempo promedio vs. límite por etapa</h2><div class="sub">Minutos · la línea vertical es el límite de SLA de cada etapa</div>
+        <svg width="532" height="196" viewBox="0 0 532 196">
+          <line x1="110" y1="0" x2="110" y2="172" stroke="#E3E3E3"/>
+          <text x="0" y="28">Ingreso</text><path d="M110 14h82a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H110z" fill="#4F5FD6"/><line x1="254" y1="8" x2="254" y2="40" stroke="#202223" stroke-width="2"/><text x="264" y="28">18 de 30</text>
+          <text x="0" y="70">Bodega</text><path d="M110 56h159a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H110z" fill="#4F5FD6"/><line x1="326" y1="50" x2="326" y2="82" stroke="#202223" stroke-width="2"/><text x="336" y="70">34 de 45</text>
+          <text x="0" y="112">Facturación</text><path d="M110 98h111a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H110z" fill="#E8A200"/><line x1="206" y1="92" x2="206" y2="124" stroke="#202223" stroke-width="2"/><text x="240" y="112" style="fill:#5E4200;font-weight:600">24 de 20 · sobre el límite</text>
+          <text x="0" y="154">Despacho</text><path d="M110 140h198a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H110z" fill="#4F5FD6"/><line x1="398" y1="134" x2="398" y2="166" stroke="#202223" stroke-width="2"/><text x="408" y="154">42 de 60</text>
+          <text x="110" y="190" text-anchor="middle">0</text><text x="398" y="190" text-anchor="middle">60 min</text>
+        </svg>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card panel" style="position:relative">
+        <h2>Pedidos creados por día</h2><div class="sub">Últimos 30 días</div>
+        <svg width="532" height="190" viewBox="0 0 532 190">
+          <line x1="30" y1="20" x2="532" y2="20" stroke="#EBEBEB"/><line x1="30" y1="80" x2="532" y2="80" stroke="#EBEBEB"/><line x1="30" y1="140" x2="532" y2="140" stroke="#E3E3E3"/>
+          <text x="0" y="24">8</text><text x="0" y="84">4</text><text x="0" y="144">0</text>
+          <path d="M30 95 L47 80 L64 102 L81 72 L98 88 L115 65 L132 95 L149 110 L166 80 L183 72 L200 58 L217 88 L234 95 L251 65 L268 80 L285 50 L302 72 L319 95 L336 118 L353 80 L370 65 L387 58 L404 72 L421 88 L438 50 L455 65 L472 35 L489 72 L506 58 L523 65 L523 140 L30 140Z" fill="rgba(79,95,214,.10)"/>
+          <path d="M30 95 L47 80 L64 102 L81 72 L98 88 L115 65 L132 95 L149 110 L166 80 L183 72 L200 58 L217 88 L234 95 L251 65 L268 80 L285 50 L302 72 L319 95 L336 118 L353 80 L370 65 L387 58 L404 72 L421 88 L438 50 L455 65 L472 35 L489 72 L506 58 L523 65" fill="none" stroke="#4F5FD6" stroke-width="2" stroke-linejoin="round"/>
+          <line x1="472" y1="20" x2="472" y2="140" stroke="#B5B5B5"/><circle cx="472" cy="35" r="4.5" fill="#4F5FD6" stroke="#fff" stroke-width="2"/>
+          <text x="30" y="162">10 sep</text><text x="270" y="162" text-anchor="middle">24 sep</text><text x="523" y="162" text-anchor="end">9 oct</text>
+        </svg>
+        <div class="tip" style="left:392px;top:58px">6 oct · 7 pedidos<br>1 excedió el SLA</div>
+      </div>
+      <div class="card panel">
+        <h2>Pedidos que más excedieron el SLA</h2><div class="sub">Tiempo sobre el límite en la etapa donde se atascaron</div>
+        <table>
+          <tr><th>Pedido</th><th>Etapa</th><th>Sobre el límite</th></tr>
+          <tr><td><span class="link">PED-2026-0031-QW2</span></td><td>Facturación</td><td><span class="badge b-crit">+48 min</span></td></tr>
+          <tr><td><span class="link">PED-2026-0027-LM8</span></td><td>Bodega</td><td><span class="badge b-crit">+31 min</span></td></tr>
+          <tr><td><span class="link">PED-2026-0043-Z7R</span></td><td>Facturación</td><td><span class="badge b-warn">+6 min · en curso</span></td></tr>
+          <tr><td><span class="link">PED-2026-0019-TT4</span></td><td>Despacho</td><td><span class="badge b-crit">+12 min</span></td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="card panel">
+      <h2>Motivos de finalización por anomalía</h2><div class="sub">6 en el período · más recientes primero</div>
+      <table>
+        <tr><th style="width:200px">Pedido</th><th>Motivo</th><th style="width:140px">Etapa</th><th style="width:220px">Registrado por</th></tr>
+        <tr><td><span class="link">PED-2026-0038-X8C</span></td><td>Cliente canceló la orden por cambio de proveedor.</td><td>Bodega</td><td>carlos.r · 9 oct, 04:26</td></tr>
+        <tr><td><span class="link">PED-2026-0033-RA1</span></td><td>Mercancía no disponible en inventario.</td><td>Bodega</td><td>laura.gomez · 5 oct, 15:02</td></tr>
+      </table>
+    </div>
+    <p class="note" style="margin-top:14px">Maqueta con datos de ejemplo. Cada gráfica incluye un botón “Ver como tabla” en la versión final.</p>
+  </main>
+</div>
+</body></html>

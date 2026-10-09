@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>SIGTOC · Pedidos (escritorio)</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+body{width:1440px}
+.shell{display:flex;min-height:1060px}
+nav.side{width:240px;padding:12px 10px;display:flex;flex-direction:column;gap:1px;background:#EBEBEB}
+.ws{display:flex;align-items:center;gap:9px;padding:8px 8px 14px;font-weight:650}
+.ws span{width:28px;height:28px;border-radius:8px;background:#fff;display:grid;place-items:center;box-shadow:0 1px 2px rgba(0,0,0,.1);font-size:12px}
+.nv{height:32px;border-radius:8px;display:flex;align-items:center;gap:9px;padding:0 9px;color:#303030;font-weight:550}
+.nv.on{background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+.nv .count{margin-left:auto;font-size:12px;font-weight:600;color:var(--crit);background:var(--critbg);border-radius:6px;padding:0 6px}
+.sub{padding-left:36px;height:28px;display:flex;align-items:center;color:var(--ink2);font-size:13px;border-radius:8px}
+.sub.on{color:var(--ink);font-weight:600}
+.nv.bottom{margin-top:auto}
+main{flex:1;padding:22px 32px 40px;min-width:0}
+.ph{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.ph h1{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.ph .right{margin-left:auto;display:flex;gap:8px}
+.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0 16px}
+.st{padding:14px 16px;display:flex;flex-direction:column;gap:6px;position:relative}
+.st.sel{box-shadow:0 0 0 2px var(--focus),0 1px 3px rgba(26,26,26,.08)}
+.st .top{display:flex;align-items:center;justify-content:space-between;color:var(--ink2);font-weight:550}
+.st .n{font-size:24px;font-weight:650;letter-spacing:-.02em}
+.st .n small{font-size:13px;font-weight:500;color:var(--ink2);margin-left:6px;letter-spacing:0}
+.seg{display:flex;gap:2px;height:6px}
+.seg i{flex:1;border-radius:3px;background:var(--line2)}
+.tabs{display:flex;gap:2px;padding:8px 8px 0;border-bottom:1px solid var(--line2)}
+.tab{height:32px;padding:0 12px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:6px;color:var(--ink2);font-weight:550;position:relative}
+.tab.on{color:var(--ink)}
+.tab.on::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;background:var(--ink);border-radius:2px}
+.tab em{font-style:normal;font-size:12px;background:var(--surface2);border-radius:6px;padding:0 6px;color:var(--ink2)}
+.filters{display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line2);align-items:center}
+.search{flex:1;max-width:420px;height:32px;border-radius:8px;box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--ink3)}
+.pill{height:28px;border-radius:99px;border:1px dashed #B5B5B5;display:flex;align-items:center;gap:6px;padding:0 10px;color:var(--ink2);font-weight:550;font-size:12.5px}
+.pill.set{border:1px solid var(--line);background:var(--surface2);color:var(--ink)}
+.sort{margin-left:auto;color:var(--ink2);font-weight:550;display:flex;align-items:center;gap:6px}
+table{width:100%;border-collapse:collapse}
+th{font-size:12px;font-weight:600;color:var(--ink2);text-align:left;padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--line2);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr.hover td{background:#F7F7F8}
+.oid{font-weight:650}
+.cli{color:var(--ink2);font-size:12.5px}
+.stage{display:flex;flex-direction:column;gap:5px}
+.stage .seg{width:112px;height:4px}
+.time{display:flex;flex-direction:column;gap:5px;width:150px}
+.time span b{font-weight:650}
+.over{color:var(--crit);font-weight:650}
+tr.closed td{color:var(--ink2)}
+.foot{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;color:var(--ink2);font-size:12.5px}
+.tip{position:absolute;background:#1A1A1A;color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.4;box-shadow:0 4px 12px rgba(0,0,0,.2);white-space:nowrap}
+</style></head><body>
+<header class="topbar">
+  <div class="brand"><i>S</i>SIGTOC</div>
+  <div class="gsearch" style="width:480px;margin-left:120px"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Buscar pedidos, clientes o seriales<span class="kbd">Ctrl K</span></div>
+  <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+    <span class="tb-icon"><svg class="i" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><b>2</b></span>
+    <span class="avatar">LG</span>
+  </div>
+</header>
+<div class="shell">
+  <nav class="side">
+    <div class="ws"><span>C&C</span>Operación</div>
+    <div class="nv on"><svg class="i" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/></svg>Pedidos<span class="count">2</span></div>
+    <div class="sub on">Todos</div>
+    <div class="sub">En riesgo</div>
+    <div class="sub">Anomalías</div>
+    <div class="nv"><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Reportes</div>
+    <div class="nv"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>Configuración de SLA</div>
+    <div class="nv bottom"><svg class="i" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/></svg>Notificaciones push<span style="margin-left:auto" class="badge b-ok">Activas</span></div>
+  </nav>
+  <main>
+    <div class="ph"><h1>Pedidos</h1><div class="right"><span class="btn primary"><svg class="i" viewBox="0 0 24 24" style="width:16px"><path d="M12 5v14M5 12h14"/></svg>Crear pedido</span></div></div>
+    <div class="banner"><svg class="i ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><div><p><b>2 pedidos necesitan atención.</b> PED-2026-0043-Z7R superó el SLA de Facturación por 6 min y PED-2026-0042-P9Q vence en 7 min.</p><span class="link">Ver pedidos en riesgo</span></div></div>
+    <div class="stages">
+      <div class="card st"><div class="top">Ingreso<span class="badge b-ok">En tiempo</span></div><div class="n num">1<small>abierto · límite 30 min</small></div></div>
+      <div class="card st"><div class="top">Bodega<span class="badge b-warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>1 por vencer</span></div><div class="n num">2<small>abiertos · límite 45 min</small></div></div>
+      <div class="card st"><div class="top">Facturación<span class="badge b-crit"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>1 excedido</span></div><div class="n num">1<small>abierto · límite 20 min</small></div></div>
+      <div class="card st"><div class="top">Despacho<span class="badge b-ok">En tiempo</span></div><div class="n num">1<small>abierto · límite 60 min</small></div></div>
+    </div>
+    <div class="card" style="overflow:visible;position:relative">
+      <div class="tabs"><span class="tab on">Todos <em>7</em></span><span class="tab">En riesgo <em>2</em></span><span class="tab">Abiertos <em>5</em></span><span class="tab">Entregados <em>1</em></span><span class="tab">Anomalías <em>1</em></span></div>
+      <div class="filters">
+        <div class="search"><svg class="i" viewBox="0 0 24 24" style="width:16px"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Filtrar por pedido o cliente</div>
+        <span class="pill"><svg class="i" viewBox="0 0 24 24" style="width:14px"><path d="M12 5v14M5 12h14"/></svg>Etapa</span>
+        <span class="pill"><svg class="i" viewBox="0 0 24 24" style="width:14px"><path d="M12 5v14M5 12h14"/></svg>Estado de SLA</span>
+        <span class="pill"><svg class="i" viewBox="0 0 24 24" style="width:14px"><path d="M12 5v14M5 12h14"/></svg>Creado por</span>
+        <span class="sort"><svg class="i" viewBox="0 0 24 24" style="width:16px"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Ordenar: mayor riesgo primero</span>
+      </div>
+      <table class="num">
+        <tr><th>Pedido</th><th>Etapa actual</th><th>Tiempo en la etapa</th><th>SLA</th><th>Creado por</th><th>Creado</th></tr>
+        <tr><td><div class="oid">PED-2026-0043-Z7R</div><div class="cli">Electrodomésticos del Caribe Ltda.</div></td><td><div class="stage">Facturación<div class="seg"><i style="background:var(--okbar)"></i><i style="background:var(--okbar)"></i><i style="background:var(--critbar)"></i><i></i></div></div></td><td><div class="time"><span><b class="over">26</b> de 20 min</span><div class="meter m-crit"><s style="width:100%"></s></div></div></td><td><span class="badge b-crit"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>Excedido +6 min</span></td><td>laura.gomez</td><td>9 oct, 09:30</td></tr>
+        <tr class="hover"><td><div class="oid">PED-2026-0042-P9Q</div><div class="cli">Ferretería El Tornillo</div></td><td><div class="stage">Bodega<div class="seg"><i style="background:var(--okbar)"></i><i style="background:var(--warnbar)"></i><i></i><i></i></div></div></td><td><div class="time"><span><b>38</b> de 45 min</span><div class="meter m-warn"><s style="width:84%"></s></div></div></td><td><span class="badge b-warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Vence en 7 min</span></td><td>laura.gomez</td><td>9 oct, 09:58</td></tr>
+        <tr><td><div class="oid">PED-2026-0045-H1W</div><div class="cli">Comercializadora Bogotá Norte</div></td><td><div class="stage">Bodega<div class="seg"><i style="background:var(--okbar)"></i><i style="background:#9BB8F0"></i><i></i><i></i></div></div></td><td><div class="time"><span><b>12</b> de 45 min</span><div class="meter m-ok"><s style="width:27%"></s></div></div></td><td><span class="badge b-ok">En tiempo</span></td><td>carlos.r</td><td>9 oct, 10:24</td></tr>
+        <tr><td><div class="oid">PED-2026-0044-B4T</div><div class="cli">Supermercados La Económica</div></td><td><div class="stage">Despacho<div class="seg"><i style="background:var(--okbar)"></i><i style="background:var(--okbar)"></i><i style="background:var(--okbar)"></i><i style="background:#9BB8F0"></i></div></div></td><td><div class="time"><span><b>22</b> de 60 min</span><div class="meter m-ok"><s style="width:37%"></s></div></div></td><td><span class="badge b-ok">En tiempo</span></td><td>laura.gomez</td><td>9 oct, 08:54</td></tr>
+        <tr><td><div class="oid">PED-2026-0041-K2M</div><div class="cli">Distribuidora Andina SAS</div></td><td><div class="stage">Ingreso<div class="seg"><i style="background:#9BB8F0"></i><i></i><i></i><i></i></div></div></td><td><div class="time"><span><b>8</b> de 30 min</span><div class="meter m-ok"><s style="width:27%"></s></div></div></td><td><span class="badge b-ok">En tiempo</span></td><td>carlos.r</td><td>9 oct, 11:08</td></tr>
+        <tr class="closed"><td><div class="oid">PED-2026-0039-M3D</div><div class="cli">Tiendas Mundo Hogar</div></td><td><div class="stage">Entregado<div class="seg"><i style="background:#B5B5B5"></i><i style="background:#B5B5B5"></i><i style="background:#B5B5B5"></i><i style="background:#B5B5B5"></i></div></div></td><td>Flujo completo en 2 h 20 min</td><td><span class="badge b-neutral">Entregado</span></td><td>laura.gomez</td><td>9 oct, 04:16</td></tr>
+        <tr class="closed"><td><div class="oid">PED-2026-0038-X8C</div><div class="cli">Importadora Pacífico</div></td><td><div class="stage">Detenido en Bodega<div class="seg"><i style="background:#B5B5B5"></i><i style="background:#B5B5B5"></i><i></i><i></i></div></div></td><td>Cliente canceló la orden</td><td><span class="badge b-neutral">Anomalía</span></td><td>carlos.r</td><td>9 oct, 02:16</td></tr>
+      </table>
+      <div class="foot"><span>7 pedidos · ordenados por riesgo de SLA</span><span>Los pedidos cerrados se muestran al final</span></div>
+      <div class="tip" style="left:470px;top:262px">Bodega · inició 11:20<br>Por vencer desde el 75 % (34 min)</div>
+    </div>
+    <p class="note" style="margin-top:14px">Maqueta con datos de ejemplo.</p>
+  </main>
+</div>
+</body></html>

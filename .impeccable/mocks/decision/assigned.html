@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>SIGTOC · Tablero Andon</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{--ground:#EEF1EF;--board:#FFFFFF;--rail:#1F2428;--ink:#1B2024;--ink2:#56606A;--ink3:#8A939B;--line:#D9DEDB;--ok:#18A058;--okbg:#E3F4EA;--warn:#F2A900;--warnbg:#FDF3D6;--warnink:#8A5F00;--bad:#E0362C;--badbg:#FCE6E4;--act:#2F6FDB}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--ground);font-family:Archivo,sans-serif;color:var(--ink);display:flex;font-variant-numeric:tabular-nums}
+.rail{width:76px;background:var(--rail);display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:6px}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--ok);display:grid;place-items:center;color:#fff;font-weight:800;font-stretch:115%;font-size:15px;margin-bottom:18px}
+.ni{width:56px;padding:8px 0;border-radius:10px;color:#AEB6BD;font-size:10.5px;font-weight:600;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ni svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+.ni.on{background:#2E353B;color:#fff}
+.me{margin-top:auto;width:36px;height:36px;border-radius:50%;background:#3A434A;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+main{flex:1;padding:22px 28px 0;display:flex;flex-direction:column;min-width:0}
+.top{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+h1{font-size:24px;font-weight:750;font-stretch:112%;letter-spacing:-.01em}
+.when{font-size:13px;color:var(--ink2);margin-left:4px}
+.search{margin-left:auto;width:300px;height:38px;border:1px solid var(--line);background:#fff;border-radius:9px;display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink3);font-size:13.5px}
+.seg{display:flex;background:#E1E6E3;border-radius:9px;padding:3px}
+.seg span{padding:7px 12px;font-size:13px;font-weight:600;color:var(--ink2);border-radius:7px}
+.seg .on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(20,30,25,.12)}
+.btn{height:38px;padding:0 16px;border-radius:9px;background:var(--act);color:#fff;font-weight:650;font-size:14px;display:flex;align-items:center;gap:8px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;flex:1;min-height:0}
+.col{display:flex;flex-direction:column;min-height:0}
+.lamp{border-radius:12px 12px 0 0;padding:12px 14px 11px;color:#fff;display:flex;align-items:center;gap:10px}
+.lamp b{font-size:15px;font-weight:750;font-stretch:110%}
+.lamp i{font-style:normal;margin-left:auto;font-size:12.5px;font-weight:650;background:rgba(0,0,0,.18);padding:3px 9px;border-radius:99px}
+.lamp .bulb{width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.g{background:var(--ok)}.a{background:var(--warn);color:#2B1E00}.a i{background:rgba(0,0,0,.1)}.r{background:var(--bad)}
+.lane{background:var(--board);border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;flex:1;padding:10px;display:flex;flex-direction:column;gap:8px}
+.sub{font-size:12px;color:var(--ink2);padding:2px 4px 4px;display:flex;justify-content:space-between}
+.mag{border:1px solid var(--line);border-radius:10px;padding:10px 12px 11px;background:#fff;display:grid;grid-template-columns:1fr auto;row-gap:7px}
+.mag.hot{background:var(--badbg);border-color:#F2B8B3}
+.mag.warm{background:var(--warnbg);border-color:#EFD38A}
+.id{font-size:13.5px;font-weight:700;letter-spacing:.01em}
+.cl{font-size:12.5px;color:var(--ink2);grid-column:1/-1;margin-top:-5px}
+.t{font-size:13px;font-weight:700;text-align:right}
+.hot .t{color:var(--bad)}.warm .t{color:var(--warnink)}.ok .t{color:var(--ok)}
+.bar{grid-column:1/-1;height:6px;border-radius:9px;background:#E6EAE8;overflow:hidden}
+.bar s{display:block;height:100%;border-radius:9px;text-decoration:none}
+.hot .bar s{background:var(--bad)}.warm .bar s{background:var(--warn)}.ok .bar s{background:var(--ok)}
+.empty{border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;font-size:12.5px;color:var(--ink3)}
+.tray{margin:14px 0 0;height:54px;border-top:1px solid var(--line);display:flex;align-items:center;gap:22px;font-size:13px;color:var(--ink2)}
+.tray b{color:var(--ink);font-weight:700}
+.tray .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:7px}
+</style></head><body>
+<nav class="rail">
+  <div class="logo">S</div>
+  <div class="ni on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="4" height="16" rx="1"/><rect x="10" y="4" width="4" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg>Tablero</div>
+  <div class="ni"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Pedidos</div>
+  <div class="ni"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Reportes</div>
+  <div class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>SLA</div>
+  <div class="me">LG</div>
+</nav>
+<main>
+  <div class="top">
+    <h1>Tablero</h1><span class="when">jueves 9 oct · 11:58</span>
+    <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A939B" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Buscar pedido, cliente o serial</div>
+    <div class="seg"><span class="on">Todas las etapas</span><span>Mi etapa</span></div>
+    <div class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Nuevo pedido</div>
+  </div>
+  <div class="grid">
+    <section class="col">
+      <div class="lamp g"><span class="bulb"></span><b>Ingreso</b><i>1 abierto</i></div>
+      <div class="lane"><div class="sub"><span>PDF del pedido + RUT</span><span>límite 30 min</span></div>
+        <div class="mag ok"><span class="id">PED-0041-K2M</span><span class="t">8 de 30 min</span><span class="cl">Distribuidora Andina SAS</span><span class="bar"><s style="width:27%"></s></span></div>
+        <div class="empty">Sin más pedidos esperando ingreso</div>
+      </div>
+    </section>
+    <section class="col">
+      <div class="lamp a"><span class="bulb"></span><b>Bodega</b><i>2 abiertos · 1 por vencer</i></div>
+      <div class="lane"><div class="sub"><span>Verificación de seriales</span><span>límite 45 min</span></div>
+        <div class="mag warm"><span class="id">PED-0042-P9Q</span><span class="t">38 de 45 min</span><span class="cl">Ferretería El Tornillo</span><span class="bar"><s style="width:84%"></s></span></div>
+        <div class="mag ok"><span class="id">PED-0045-H1W</span><span class="t">12 de 45 min</span><span class="cl">Comercializadora Bogotá Norte</span><span class="bar"><s style="width:27%"></s></span></div>
+      </div>
+    </section>
+    <section class="col">
+      <div class="lamp r"><span class="bulb"></span><b>Facturación</b><i>1 abierto · 1 excedido</i></div>
+      <div class="lane"><div class="sub"><span>Número de factura</span><span>límite 20 min</span></div>
+        <div class="mag hot"><span class="id">PED-0043-Z7R</span><span class="t">+6 min excedido</span><span class="cl">Electrodomésticos del Caribe Ltda.</span><span class="bar"><s style="width:100%"></s></span></div>
+      </div>
+    </section>
+    <section class="col">
+      <div class="lamp g"><span class="bulb"></span><b>Despacho</b><i>1 abierto</i></div>
+      <div class="lane"><div class="sub"><span>Guía o entrega en tienda</span><span>límite 60 min</span></div>
+        <div class="mag ok"><span class="id">PED-0044-B4T</span><span class="t">22 de 60 min</span><span class="cl">Supermercados La Económica</span><span class="bar"><s style="width:37%"></s></span></div>
+      </div>
+    </section>
+  </div>
+  <div class="tray"><span><span class="dot" style="background:var(--ok)"></span><b>1</b> entregado hoy</span><span><span class="dot" style="background:var(--ink3)"></span><b>1</b> finalizado por anomalía</span><span style="margin-left:auto">Cumplimiento SLA últimos 30 días <b>83 %</b></span></div>
+</main>
+</body></html>

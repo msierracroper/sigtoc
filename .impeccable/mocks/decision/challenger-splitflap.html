@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>SIGTOC · Tablero de Salidas</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--flap:#121315;--frame:#1E2023;--paint:#F4F1E8;--dim:#8E949A;--amber:#F5B700;--red:#E5483D;--panel:#E9E6DC;--ink:#17191C;--ink2:#5B6066;--line:#2B2E32}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--flap);font-family:Barlow,sans-serif;color:var(--paint);display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+header{height:68px;background:var(--frame);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 28px;gap:28px}
+.brand{font-family:"Barlow Condensed";font-weight:700;font-size:24px;letter-spacing:.06em}
+.brand small{color:var(--amber)}
+nav{display:flex;gap:4px}
+nav span{padding:8px 14px;border-radius:8px;font-weight:600;font-size:14.5px;color:#B8BCC0}
+nav .on{background:#2C3034;color:var(--paint)}
+.clock{margin-left:auto;display:flex;gap:3px}
+.clock b,.f b{display:inline-grid;place-items:center;background:#0B0C0D;border-radius:4px;position:relative;font-family:"Barlow Condensed";font-weight:600}
+.clock b{width:26px;height:38px;font-size:28px}
+.clock b::after,.f b::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.55)}
+.clock em{font-style:normal;font-family:"Barlow Condensed";font-size:28px;align-self:center;color:var(--dim)}
+.new{height:40px;padding:0 18px;border-radius:9px;background:var(--paint);color:var(--ink);font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:8px}
+.wrap{flex:1;display:flex;min-height:0}
+.boardz{flex:1;padding:20px 24px 0 28px;display:flex;flex-direction:column;min-width:0}
+.filters{display:flex;gap:8px;margin-bottom:16px;align-items:center}
+.chip{height:34px;padding:0 13px;border-radius:99px;border:1px solid #34383C;display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:#C9CCCF}
+.chip.on{background:var(--paint);color:var(--ink);border-color:var(--paint)}
+.chip i{font-style:normal;font-size:12px;color:var(--dim)}.chip.on i{color:var(--ink2)}
+.search{margin-left:auto;width:260px;height:36px;border-radius:9px;background:#1C1E21;border:1px solid #34383C;color:var(--dim);font-size:13.5px;display:flex;align-items:center;padding:0 12px}
+table{width:100%;border-collapse:collapse}
+th{font-family:"Barlow Condensed";font-weight:600;font-size:13px;letter-spacing:.12em;color:var(--dim);text-align:left;padding:0 10px 10px;border-bottom:1px solid var(--line)}
+td{padding:0 10px;height:62px;border-bottom:1px solid var(--line);font-size:15px;vertical-align:middle}
+tr.sel td{background:#1B1D20}
+.lamp{width:10px;height:10px;border-radius:50%;display:inline-block}
+.id{font-family:"Barlow Condensed";font-weight:600;font-size:20px;letter-spacing:.04em}
+.cl{color:#C9CCCF}
+.st{font-family:"Barlow Condensed";font-weight:600;font-size:17px;letter-spacing:.08em}
+.f{display:flex;gap:2px}
+.f b{width:19px;height:30px;font-size:21px}
+.late .f b{color:var(--amber)}.over .f b{color:var(--red)}
+.late .st{color:var(--amber)}.over .st{color:var(--red)}
+.drawer{width:452px;background:var(--panel);color:var(--ink);padding:22px 24px;display:flex;flex-direction:column;gap:16px}
+.dh{display:flex;justify-content:space-between;align-items:flex-start}
+.dh h2{font-family:"Barlow Condensed";font-size:30px;font-weight:700;letter-spacing:.03em}
+.dh p{font-size:14px;color:var(--ink2)}
+.pill{background:#FBEFC9;color:#7A5600;font-weight:700;font-size:12.5px;padding:5px 10px;border-radius:99px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.steps div{border-radius:8px;padding:9px 10px;font-size:12.5px;font-weight:600;background:#DEDACE;color:var(--ink2)}
+.steps .done{background:#D5E8DA;color:#1E6B3E}.steps .now{background:var(--ink);color:var(--paint)}
+.card{background:#fff;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card h3{font-size:16px;font-weight:700}
+.meter{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2)}
+.meter b{color:#7A5600}
+.mbar{height:8px;border-radius:9px;background:#ECE9E0}.mbar s{display:block;width:84%;height:100%;border-radius:9px;background:var(--amber)}
+.in{height:46px;border:1.5px solid #2F6FDB;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:16px;color:#8A8F95}
+.sn{height:40px;border:1px solid #DDD9CE;border-radius:10px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px;font-weight:600}
+.go{height:48px;border-radius:10px;background:var(--ink);color:var(--paint);font-weight:700;font-size:15.5px;display:grid;place-items:center}
+.anom{font-size:13.5px;color:#9A3B33;font-weight:600;text-align:center;padding-top:6px}
+</style></head><body>
+<header>
+  <div class="brand">SIGTOC <small>·</small> SALIDAS</div>
+  <nav><span class="on">Pedidos</span><span>Reportes</span><span>SLA</span></nav>
+  <div class="clock"><b>1</b><b>1</b><em>:</em><b>5</b><b>8</b></div>
+  <div class="new"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#17191C" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Nuevo pedido</div>
+</header>
+<div class="wrap">
+  <section class="boardz">
+    <div class="filters"><span class="chip on">Abiertos <i>5</i></span><span class="chip">Ingreso <i>1</i></span><span class="chip">Bodega <i>2</i></span><span class="chip">Facturación <i>1</i></span><span class="chip">Despacho <i>1</i></span><span class="chip">Cerrados hoy <i>2</i></span><span class="search">Buscar pedido o cliente</span></div>
+    <table>
+      <tr><th></th><th>PEDIDO</th><th>CLIENTE</th><th>ETAPA</th><th>INICIÓ</th><th>RESTANTE</th><th>ESTADO</th></tr>
+      <tr class="over"><td><span class="lamp" style="background:var(--red)"></span></td><td class="id">0043-Z7R</td><td class="cl">Electrodomésticos del Caribe</td><td>Facturación</td><td>11:32</td><td><span class="f"><b>+</b><b>0</b><b>6</b></span></td><td class="st">EXCEDIDO</td></tr>
+      <tr class="late sel"><td><span class="lamp" style="background:var(--amber)"></span></td><td class="id">0042-P9Q</td><td class="cl">Ferretería El Tornillo</td><td>Bodega</td><td>11:20</td><td><span class="f"><b>0</b><b>0</b><b>7</b></span></td><td class="st">POR VENCER</td></tr>
+      <tr><td><span class="lamp" style="background:#3A3E42"></span></td><td class="id">0041-K2M</td><td class="cl">Distribuidora Andina SAS</td><td>Ingreso</td><td>11:50</td><td><span class="f"><b>0</b><b>2</b><b>2</b></span></td><td class="st">A TIEMPO</td></tr>
+      <tr><td><span class="lamp" style="background:#3A3E42"></span></td><td class="id">0045-H1W</td><td class="cl">Comercializadora Bogotá Norte</td><td>Bodega</td><td>11:46</td><td><span class="f"><b>0</b><b>3</b><b>3</b></span></td><td class="st">A TIEMPO</td></tr>
+      <tr><td><span class="lamp" style="background:#3A3E42"></span></td><td class="id">0044-B4T</td><td class="cl">Supermercados La Económica</td><td>Despacho</td><td>11:36</td><td><span class="f"><b>0</b><b>3</b><b>8</b></span></td><td class="st">A TIEMPO</td></tr>
+      <tr><td colspan="7" style="height:40px;padding-top:18px;font-family:'Barlow Condensed';font-size:13px;letter-spacing:.12em;color:#8E949A;font-weight:600">CERRADOS HOY</td></tr>
+      <tr style="opacity:.55"><td><span class="lamp" style="background:#3A3E42"></span></td><td class="id">0039-M3D</td><td class="cl">Tiendas Mundo Hogar</td><td>Despacho</td><td>04:16</td><td>—</td><td class="st">ENTREGADO</td></tr>
+      <tr><td><span class="lamp" style="background:#5A2420"></span></td><td class="id" style="color:#B66A63">0038-X8C</td><td class="cl" style="color:#B66A63">Importadora Pacífico</td><td style="color:#B66A63">Bodega</td><td style="color:#B66A63">02:16</td><td style="color:#B66A63">—</td><td class="st" style="color:#B66A63">ANOMALÍA</td></tr>
+    </table>
+  </section>
+  <aside class="drawer">
+    <div class="dh"><div><h2>PED-0042-P9Q</h2><p>Ferretería El Tornillo · creado 09:58</p></div><span class="pill">Por vencer</span></div>
+    <div class="steps"><div class="done"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="vertical-align:-1px;margin-right:4px"><path d="m5 12 5 5 9-10"/></svg>Ingreso</div><div class="now">Bodega</div><div>Facturación</div><div>Despacho</div></div>
+    <div class="card">
+      <h3>Etapa 2 · Verificar seriales</h3>
+      <div class="meter"><span>Tiempo en bodega</span><b>38 de 45 min</b></div>
+      <div class="mbar"><s></s></div>
+      <div class="sn">SN-88213-A <span style="color:#8A8F95;font-weight:500">escaneado</span></div>
+      <div class="in">Escanea el siguiente serial…</div>
+      <div class="go">Finalizar bodega → pasa a Facturación</div>
+      <div class="anom">Finalizar por anomalía</div>
+    </div>
+    <div class="card" style="gap:8px"><h3>Registro de auditoría</h3>
+      <div class="meter"><span>11:20 · laura.gomez — Etapa 1 finalizada</span></div>
+      <div class="meter"><span>10:52 · laura.gomez — PDF del pedido cargado (v1)</span></div>
+      <div class="meter"><span>09:58 · laura.gomez — Pedido creado</span></div>
+    </div>
+  </aside>
+</div>
+</body></html>

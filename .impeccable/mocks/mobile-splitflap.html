@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=390"><title>SIGTOC · Salidas · móvil bodega</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--flap:#121315;--frame:#1E2023;--paint:#F4F1E8;--dim:#8E949A;--amber:#F5B700;--panel:#E9E6DC;--ink:#17191C;--ink2:#5B6066}
+*{box-sizing:border-box;margin:0}
+body{width:390px;height:844px;overflow:hidden;background:var(--panel);font-family:Barlow,sans-serif;color:var(--ink);display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+.top{background:var(--flap);color:var(--paint);padding:52px 16px 16px}
+.back{font-size:14px;color:#B8BCC0;display:flex;align-items:center;gap:6px;margin-bottom:12px}
+.id{font-family:"Barlow Condensed";font-weight:700;font-size:30px;letter-spacing:.04em}
+.who{color:#C9CCCF;font-size:15px}
+.rem{display:flex;align-items:center;gap:12px;margin-top:14px}
+.f{display:flex;gap:3px}
+.f b{display:inline-grid;place-items:center;width:28px;height:42px;background:#0B0C0D;border-radius:5px;position:relative;font-family:"Barlow Condensed";font-weight:600;font-size:32px;color:var(--amber)}
+.f b::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.55)}
+.rem p{font-family:"Barlow Condensed";font-size:16px;letter-spacing:.1em;color:var(--amber);font-weight:600;line-height:1.1}
+.rem p span{display:block;color:var(--dim);letter-spacing:.04em;font-weight:500}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:12px 16px 0}
+.steps div{border-radius:8px;padding:8px 0;text-align:center;font-size:12.5px;font-weight:600;background:#DEDACE;color:var(--ink2)}
+.steps .done{background:#D5E8DA;color:#1E6B3E}.steps .now{background:var(--ink);color:var(--paint)}
+.body{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px}
+h3{font-size:17px;font-weight:700}
+.sn{height:52px;background:#fff;border-radius:12px;display:flex;align-items:center;padding:0 14px;gap:10px;font-size:17px;font-weight:600}
+.sn .x{margin-left:auto;width:44px;height:44px;display:grid;place-items:center;color:#9A9EA3}
+.scan{height:56px;background:#fff;border:2px solid var(--ink);border-radius:12px;display:flex;align-items:center;padding:0 14px;gap:10px;font-size:17px;color:#8A8F95}
+.nos{height:48px;border-radius:12px;background:#F3F1EA;display:flex;align-items:center;padding:0 14px;font-size:15px;color:var(--ink2)}
+.sw{width:42px;height:26px;border-radius:99px;background:#CFCBBF;position:relative;margin-left:auto}.sw::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.foot{padding:12px 16px 26px;display:flex;flex-direction:column;gap:10px}
+.go{height:56px;border-radius:14px;background:var(--ink);color:var(--paint);font-size:17px;font-weight:700;display:grid;place-items:center}
+.anom{height:40px;border-radius:12px;border:1px solid #D9A9A3;color:#A3342B;font-size:14.5px;font-weight:600;display:grid;place-items:center}
+</style></head><body>
+<div class="top">
+  <div class="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 6-6 6 6 6"/></svg>Salidas · Bodega (2)</div>
+  <div class="id">PED-0042-P9Q</div>
+  <div class="who">Ferretería El Tornillo</div>
+  <div class="rem"><span class="f"><b>0</b><b>7</b></span><p>MIN RESTANTES<span>38 de 45 min en bodega</span></p></div>
+</div>
+<div class="steps"><div class="done">Ingreso</div><div class="now">Bodega</div><div>Factura</div><div>Despacho</div></div>
+<div class="body">
+  <h3>Verificar seriales · 2 escaneados</h3>
+  <div class="sn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E6B3E" stroke-width="2.6"><path d="m5 12 5 5 9-10"/></svg>SN-88213-A<span class="x"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="sn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E6B3E" stroke-width="2.6"><path d="m5 12 5 5 9-10"/></svg>SN-88214-A<span class="x"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="scan"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#17191C" stroke-width="2"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg>Escanea el siguiente serial</div>
+  <div class="nos">Este pedido no lleva seriales<span class="sw"></span></div>
+</div>
+<div class="foot">
+  <div class="go">Finalizar bodega → Facturación</div>
+  <div class="anom">No se puede continuar · reportar anomalía</div>
+</div>
+</body></html>
