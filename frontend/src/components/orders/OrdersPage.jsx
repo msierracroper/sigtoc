@@ -24,8 +24,9 @@ function readStageFilter() {
 
 function matchesSearch(o, q) {
   if (!q) return true;
-  const seriales = o.stages?.[2]?.data?.serialesList?.join(" ") || o.stages?.[2]?.data?.seriales || "";
-  return `${o.id} ${o.cliente} ${seriales}`.toLowerCase().includes(q.toLowerCase());
+  const seriales = o.stages?.[2]?.data?.seriales || o.stages?.[2]?.data?.serialesList?.join(" ") || ""; // incluye referencias ("BOC 7012…")
+  const origen = o.stages?.[1]?.data?.origen || "";
+  return `${o.id} ${o.cliente} ${seriales} ${origen}`.toLowerCase().includes(q.toLowerCase());
 }
 
 function inTab(o, sla, tab) {
@@ -43,8 +44,16 @@ function TimeCell({ order, sla }) {
   }
   if (order.status === "cancelado") return <span className="text-ink2 line-clamp-1">{order.cancel_info?.reason || "Finalizado por anomalía"}</span>;
   if (!sla) return <span className="text-ink3">—</span>;
+  const awaitingGuide = order.current_stage === 4 && order.stages?.[4]?.pickup?.awaitingGuide;
+  if (sla.paused) return (
+    <div className="flex flex-col gap-1 w-[190px]" title={sla.pause.reason}>
+      <span className="text-ink2 truncate">Congelado en {fmtElapsed(sla.elapsedMin)} de {sla.limitMin} min</span>
+      <span className="text-[12px] text-ink3 truncate">{sla.pause.reason}</span>
+    </div>
+  );
   return (
     <div className="flex flex-col gap-1.5 w-[150px]">
+      {awaitingGuide && <span className="text-[12px] font-semibold text-info">Recogido · guía pendiente</span>}
       <span><b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : ""}`}>{fmtElapsed(sla.elapsedMin)}</b> de {sla.limitMin} min</span>
       <SlaMeter sla={sla} />
     </div>
@@ -88,8 +97,21 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
       ...s, open: open.length,
       over: open.filter((x) => x.sla?.state === "excedido").length,
       warn: open.filter((x) => x.sla?.state === "alerta").length,
+      waiting: open.filter((x) => x.sla?.paused).length,
     };
   });
+
+  // Entregados (despachados): total y cuántos se cerraron hoy
+  const delivered = ranked.filter((x) => x.o.status === "cerrado");
+  const today = new Date().toDateString();
+  const deliveredToday = delivered.filter((x) => x.o.stages?.[4]?.completedAt && new Date(x.o.stages[4].completedAt).toDateString() === today).length;
+  const deliveredOn = tab === "entregados";
+  function toggleDelivered() { setStageFilter(""); onTabChange(deliveredOn ? "todos" : "entregados"); }
+  // al filtrar por etapa (pedidos abiertos) se sale de las pestañas de cerrados
+  function pickStage(id) {
+    if (tab === "entregados" || tab === "anomalias") onTabChange("todos");
+    setStageFilter(id);
+  }
 
   const tabCounts = Object.fromEntries(ORDER_TABS.map((t) => [t.id, ranked.filter((x) => inTab(x.o, x.sla, t.id)).length]));
 
@@ -136,16 +158,17 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
       )}
 
       {/* Etapas: resumen + filtro rápido (tarjetas en escritorio) */}
-      <div className="hidden md:grid md:grid-cols-4 gap-3">
+      <div className="hidden md:grid md:grid-cols-3 xl:grid-cols-5 gap-3">
         {stageStats.map((s) => {
-          const on = stageFilter === String(s.id);
+          const on = !deliveredOn && stageFilter === String(s.id);
           return (
-            <button key={s.id} onClick={() => setStageFilter(on ? "" : String(s.id))} aria-pressed={on}
+            <button key={s.id} onClick={() => pickStage(on ? "" : String(s.id))} aria-pressed={on}
               className={`card text-left px-4 py-3.5 flex flex-col gap-1.5 min-w-0 transition-shadow ${on ? "shadow-[0_0_0_2px_#005BD3,0_1px_3px_rgba(26,26,26,.08)]" : "hover:shadow-[0_0_0_1px_#C9C9C9,0_1px_3px_rgba(26,26,26,.08)]"}`}>
               <div className="flex items-center justify-between gap-2 text-ink2 font-semibold text-[13.5px]">
                 {s.short}
                 {s.over > 0 ? <Badge tone="critical" icon={AlertCircle}>{s.over} excedido{s.over > 1 ? "s" : ""}</Badge>
                   : s.warn > 0 ? <Badge tone="warning" icon={AlertTriangle}>{s.warn} por vencer</Badge>
+                  : s.waiting > 0 ? <Badge tone="info">{s.waiting} en stand by</Badge>
                   : <Badge tone={s.open ? "success" : "neutral"}>{s.open ? "En tiempo" : "Libre"}</Badge>}
               </div>
               <div className="num"><span className="text-[22px] font-semibold tracking-tight">{s.open}</span>
@@ -153,21 +176,34 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
             </button>
           );
         })}
+        <button onClick={toggleDelivered} aria-pressed={deliveredOn}
+          className={`card text-left px-4 py-3.5 flex flex-col gap-1.5 min-w-0 transition-shadow ${deliveredOn ? "shadow-[0_0_0_2px_#005BD3,0_1px_3px_rgba(26,26,26,.08)]" : "hover:shadow-[0_0_0_1px_#C9C9C9,0_1px_3px_rgba(26,26,26,.08)]"}`}>
+          <div className="flex items-center justify-between gap-2 text-ink2 font-semibold text-[13.5px]">
+            Entregados
+            <Badge tone={deliveredToday ? "success" : "neutral"}>{deliveredToday} hoy</Badge>
+          </div>
+          <div className="num"><span className="text-[22px] font-semibold tracking-tight">{delivered.length}</span>
+            <span className="text-[13px] text-ink2 ml-1.5">{delivered.length === 1 ? "despachado" : "despachados"} en total</span></div>
+        </button>
       </div>
 
       {/* Etapas en el celular: chips con conteo (el filtro se recuerda en el dispositivo) */}
       <div className="md:hidden flex gap-1.5 overflow-x-auto -mx-3 px-3 pb-0.5" role="group" aria-label="Filtrar por etapa">
         {[{ id: "", short: "Todas", open: null }, ...stageStats].map((s) => {
-          const on = stageFilter === String(s.id);
+          const on = !deliveredOn && stageFilter === String(s.id);
           const risk = s.over > 0 || s.warn > 0;
           return (
-            <button key={s.id || "all"} onClick={() => setStageFilter(String(s.id))} aria-pressed={on}
+            <button key={s.id || "all"} onClick={() => pickStage(String(s.id))} aria-pressed={on}
               className={`h-10 px-3.5 rounded-full flex-none flex items-center gap-1.5 font-semibold text-[14px] ${on ? "bg-ink text-white" : "bg-surface text-ink2 shadow-[inset_0_0_0_1px_#E3E3E3]"}`}>
               {s.short}
               {s.open !== null && <span className={`num text-[12.5px] ${on ? "text-white/75" : risk ? "text-crit" : "text-ink3"}`}>{s.open}</span>}
             </button>
           );
         })}
+        <button onClick={toggleDelivered} aria-pressed={deliveredOn}
+          className={`h-10 px-3.5 rounded-full flex-none flex items-center gap-1.5 font-semibold text-[14px] ${deliveredOn ? "bg-ink text-white" : "bg-surface text-ink2 shadow-[inset_0_0_0_1px_#E3E3E3]"}`}>
+          Entregados <span className={`num text-[12.5px] ${deliveredOn ? "text-white/75" : "text-ink3"}`}>{delivered.length}</span>
+        </button>
       </div>
 
       <div className="card overflow-hidden">
@@ -250,7 +286,7 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
                     <tr key={o.id} onClick={() => onOpen(o.id)} className={`cursor-pointer border-b border-line2 last:border-0 hover:bg-surface2 ${closed ? "text-ink2" : ""}`}>
                       <td className="px-3.5 py-3">
                         <span className="font-semibold text-ink">{o.id}</span>
-                        <div className="text-[12.5px] text-ink2 truncate max-w-[260px]">{o.cliente}</div>
+                        <div className="text-[12.5px] text-ink2 truncate max-w-[260px]">{o.cliente}{o.stages?.[1]?.data?.origen ? ` · ${o.stages[1].data.origen}` : ""}</div>
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap"><div className="flex flex-col gap-1.5">{stageLabel(o)}<StageTrack order={o} sla={sla} className="w-28" /></div></td>
                       <td className="px-3.5 py-3"><TimeCell order={o} sla={sla} /></td>
@@ -274,10 +310,10 @@ export default function OrdersPage({ orders, now, slaSettings, tab, onTabChange,
                   <button onClick={() => onOpen(o.id)} className="w-full text-left p-3.5 grid grid-cols-[1fr_auto] gap-x-2.5 gap-y-1 active:bg-surface2">
                     <span className="font-semibold text-[15px] truncate">{o.id}</span>
                     <OrderStatusBadge order={o} sla={sla} />
-                    <span className="col-span-2 text-[13.5px] text-ink2 truncate">{o.cliente}</span>
+                    <span className="col-span-2 text-[13.5px] text-ink2 truncate">{o.cliente}{o.stages?.[1]?.data?.origen ? ` · ${o.stages[1].data.origen}` : ""}</span>
                     <span className="col-span-2 flex justify-between items-center mt-1.5 text-[13.5px] text-ink2">
-                      <span>{stageLabel(o)}</span>
-                      {sla && <span><b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : "text-ink"}`}>{fmtElapsed(sla.elapsedMin)}</b> de {sla.limitMin} min</span>}
+                      <span>{stageLabel(o)}{o.current_stage === 4 && o.status === "abierto" && o.stages?.[4]?.pickup?.awaitingGuide ? " · guía pendiente" : ""}</span>
+                      {sla && <span>{sla.paused ? "Congelado · " : ""}<b className={`font-semibold ${sla.state === "excedido" ? "text-crit" : "text-ink"}`}>{fmtElapsed(sla.elapsedMin)}</b> de {sla.limitMin} min</span>}
                     </span>
                     {sla && <SlaMeter sla={sla} className="col-span-2 mt-0.5" />}
                   </button>

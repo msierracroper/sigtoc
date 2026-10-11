@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Layers, BarChart3, Clock3, Bell, BellOff, Search, Menu, X, LogOut, MonitorPlay } from "lucide-react";
+import { Layers, BarChart3, Clock3, Bell, BellOff, Search, Menu, X, LogOut, MonitorPlay, Tags, Truck } from "lucide-react";
 import AlertBell from "./AlertBell";
 
 export const ORDER_VIEWS = [
@@ -21,7 +21,7 @@ function NavItem({ icon: Icon, label, active, onClick, count }) {
 
 export default function AppShell({
   email, page, ordersView, alertsCount, orders, slaSettings, now, search, onSearch,
-  onNavigate, onOpenOrder, onOpenSla, pushEnabled, onTogglePush, onLogout, children,
+  onNavigate, onOpenOrder, onOpenSla, onOpenOrigins, onOpenCarriers, pushEnabled, onTogglePush, onLogout, children,
 }) {
   const [drawer, setDrawer] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -53,6 +53,8 @@ export default function AppShell({
       ))}
       <NavItem icon={BarChart3} label="Reportes" active={page === "reports"} onClick={() => go("reports")} />
       <NavItem icon={Clock3} label="Configuración de SLA" onClick={() => { onOpenSla(); setDrawer(false); }} />
+      <NavItem icon={Tags} label="Orígenes de venta" onClick={() => { onOpenOrigins(); setDrawer(false); }} />
+      <NavItem icon={Truck} label="Transportadoras" onClick={() => { onOpenCarriers(); setDrawer(false); }} />
       <NavItem icon={MonitorPlay} label="Tablero para TV" onClick={() => { window.open("/tablero", "_blank", "noopener"); setDrawer(false); }} />
       <div className="mt-auto pt-3">
         <button onClick={onTogglePush}

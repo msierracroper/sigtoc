@@ -6,7 +6,7 @@ import Button from "../../ui/Button";
 import StageDataView from "./StageDataView";
 import StageEditForm from "./StageEditForm";
 
-export default function StageHistoryModal({ orderId, stage, stageData, onClose, onSaveEdit }) {
+export default function StageHistoryModal({ orderId, stage, stageData, onClose, onSaveEdit, origins, carriers }) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const history = stageData.editHistory || [];
@@ -17,7 +17,7 @@ export default function StageHistoryModal({ orderId, stage, stageData, onClose, 
       subtitle={`Completada ${fmtShort(stageData.completedAt)} · versión actual v${version}`}>
       <div className="space-y-5">
         {editing ? (
-          <StageEditForm orderId={orderId} stageId={stage.id} data={stageData.data} busy={busy}
+          <StageEditForm orderId={orderId} stageId={stage.id} data={stageData.data} busy={busy} origins={origins} carriers={carriers}
             onSave={async (newData) => { setBusy(true); await onSaveEdit(newData); setBusy(false); setEditing(false); }}
             onCancel={() => setEditing(false)} />
         ) : (

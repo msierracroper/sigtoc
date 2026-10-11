@@ -1,4 +1,5 @@
 import { STAGES } from "../constants/stages";
+import { effectiveStageMinutes, pausedMs } from "./sla";
 
 const DAY = 86400000;
 
@@ -18,11 +19,16 @@ export function inRange(o, from, to) {
 
 function stageLimit(o, stageId, slaSettings) { return o.sla_config?.[stageId] ?? slaSettings[stageId] ?? 30; }
 
-function stageMinutes(st) { return (new Date(st.completedAt) - new Date(st.startedAt)) / 60000; }
+// Duración efectiva de una etapa completada: sin el tiempo en stand by
+function stageMinutes(st) { return effectiveStageMinutes(st, new Date(st.completedAt).getTime()); }
 
+// Flujo completo (creación → entrega) sin el tiempo total en stand by
 function flowMinutes(o) {
   const start = o.stages[1]?.startedAt, end = o.stages[4]?.completedAt;
-  return o.status === "cerrado" && start && end ? (new Date(end) - new Date(start)) / 60000 : null;
+  if (o.status !== "cerrado" || !start || !end) return null;
+  const endMs = new Date(end).getTime();
+  const paused = STAGES.reduce((acc, s) => acc + pausedMs(o.stages[s.id], endMs), 0);
+  return Math.max(0, endMs - new Date(start).getTime() - paused) / 60000;
 }
 
 const mean = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
@@ -87,8 +93,9 @@ export function topExceeded(orders, slaSettings, now, limit = 5) {
       if (!st?.startedAt) continue;
       const running = !st.completedAt && o.status === "abierto" && o.current_stage === s.id;
       if (!st.completedAt && !running) continue;
-      const end = st.completedAt ? new Date(st.completedAt).getTime() : now;
-      const over = (end - new Date(st.startedAt).getTime()) / 60000 - stageLimit(o, s.id, slaSettings);
+      const openPause = running ? (st.pauses || []).find((p) => !p.until) : null;
+      const end = st.completedAt ? new Date(st.completedAt).getTime() : openPause ? new Date(openPause.since).getTime() : now;
+      const over = effectiveStageMinutes(st, end) - stageLimit(o, s.id, slaSettings);
       if (over > 0 && (!worst || over > worst.over)) worst = { over, stage: s.short, running };
     }
     if (worst) rows.push({ order: o, ...worst });

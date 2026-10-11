@@ -64,6 +64,7 @@ stages             jsonb -- { "1": {startedAt, completedAt, data, editHistory}, 
 audit_log          jsonb -- [{ts, user, action}, ...]
 whatsapp_log       jsonb -- [{ts, text}, ...]  (este es el "Centro de notificaciones" en la UI — el nombre de columna quedó igual por compatibilidad, no se renombró en DB)
 cancel_info        jsonb -- {reason, by, at} | null — cuando se finaliza por anomalía
+payment            jsonb -- {paid, paidBy, paidAt, proofPath, proofBy, proofAt} | null — se marca/desmarca en cualquier etapa
 last_notified_state text  -- 'alerta' | 'excedido' | null — control para no duplicar push notifications
 last_notified_at   timestamptz
 updated_at         timestamptz (trigger automático)
@@ -71,10 +72,10 @@ updated_at         timestamptz (trigger automático)
 RLS: habilitado, policy `authenticated_full_access` — cualquier usuario autenticado puede leer/escribir todo (single-tenant, un solo rol por ahora; pensado para roles diferenciados por etapa en el futuro).
 
 **Estructura de `data` dentro de cada etapa**:
-- Etapa 1: `{ pdfPath, rutPath }` (rutas dentro del bucket `pedido-pdfs`, `rutPath` puede ser `null` — es opcional)
-- Etapa 2: `{ serialesList: ["SN-1","SN-2",...], seriales: "SN-1, SN-2" }` (se guardan ambos: el array para UI moderna, el string plano para compatibilidad con pedidos viejos que solo tenían `seriales` como texto)
+- Etapa 1: `{ origen, preventa, pdfPath, rutPath }` — `origen` es el nombre del origen de venta (obligatorio, guardado como texto: renombrar un origen no cambia pedidos anteriores); `preventa` booleano; rutas dentro del bucket `pedido-pdfs` (`rutPath` opcional).
+- Etapa 2: `{ items: [{ref, serial}], serialesList, seriales }` — `items` son los artículos (referencia + serial, ej. `BOC` / `701233131`; la referencia se guarda en mayúsculas). `serialesList` (solo seriales) y `seriales` (texto plano "BOC 701233131, …") se mantienen por compatibilidad; los pedidos anteriores sin `items` se leen como artículos con referencia vacía (`utils/items.js`).
 - Etapa 3: `{ factura }`
-- Etapa 4: `{ modo: "guia" | "tienda", guiaNumero: string|null, guiaFilePath: string|null }` — número y/o archivo de guía solo aplican cuando `modo === "guia"`.
+- Etapa 4: `{ modo: "guia" | "tienda", transportadora, guiaNumero, guiaFilePath, recogidoSinGuia? }` — con `modo === "guia"` la transportadora es obligatoria (catálogo `carriers`) y se exige número y/o archivo de guía. `stages[4].pickup = {awaitingGuide, at, by, transportadora}` registra "Recogido, pendiente de guía" (se marca/desmarca al instante, con auditoría; el SLA sigue contando); al finalizar se copia a `data.recogidoSinGuia`.
 
 **Versionado (`editHistory`)**: cuando se edita una etapa ya completada, el dato viejo se empuja a `stages[n].editHistory` como `{data, editedAt, editedBy, version}` y el dato nuevo pasa a ser el actual. La UI muestra "v1", "v2", etc.
 
@@ -85,6 +86,21 @@ sla_config  jsonb  -- { "1": 30, "2": 45, "3": 20, "4": 60 }  minutos límite po
 updated_at  timestamptz
 ```
 Editable desde la UI (botón "SLA" en el dashboard). Al cambiar, afecta en vivo el cálculo de estado de SLA de todos los pedidos abiertos (los reportes históricos sí usan el snapshot guardado en `orders.sla_config` de cada pedido, para no distorsionar el pasado).
+
+### Tabla `sale_origins`
+```sql
+id         uuid primary key
+name       text  -- único sin distinguir mayúsculas (Shopify, Instagram, Facebook...)
+active     boolean  -- false = oculto en el selector (no se borra, para no romper pedidos)
+created_at timestamptz
+created_by uuid references auth.users(id)
+```
+Se administra desde la app en Configuración → Orígenes de venta.
+
+**Stand by**: cualquier etapa activa se puede pausar con motivo obligatorio ("Poner en stand by"). Cada etapa guarda `stages[n].pauses = [{since, until, reason, kind: "manual"|"preventa", by, resumedBy}]`; una pausa sin `until` está abierta. El SLA usa el tiempo **efectivo** (transcurrido menos pausas): con una pausa abierta el reloj queda congelado, el pedido no cuenta como en riesgo y `sla-push-check` no lo evalúa. "Reanudar" cierra la pausa y el SLA sigue desde donde quedó. Los reportes también descuentan las pausas. **Preventa** = stand by automático en Bodega al finalizar Ingreso con `preventa: true` (motivo "Preventa: esperando la llegada de la mercancía"; se reanuda con "Llegó la mercancía").
+
+### Tabla `carriers`
+Misma estructura que `sale_origins` (`id, name, active, created_at, created_by`). Transportadoras de la Etapa 4; se administran en Configuración → Transportadoras. Script: `backend/supabase/migrations/20261011120000_sigtoc_carriers.sql`.
 
 ### Tabla `push_subscriptions`
 ```sql
@@ -191,7 +207,7 @@ Qué hace cada componente:
 - `FileSlot`, `PdfUploader`, `GuideUploader`, `DocLink` — subir y ver documentos (PDF del pedido, RUT, guía) con URL firmada.
 - `NewOrderModal` — crear pedido (cliente obligatorio). `SlaSettingsModal` — editar el SLA global con validación.
 - `ReportsView` (+ `KpiCard`, `ChartCard`, `StageBars`) — reportes por período (7/30/90 días) con comparación contra el período anterior: KPIs con tendencia, cumplimiento por etapa vs. meta 80 %, tiempo promedio vs. límite, pedidos por día, pedidos que más excedieron el SLA y motivos de anomalía. Cada gráfica tiene "Ver como tabla".
-- `BoardView` — **tablero para TV** en `/tablero` (todas las etapas) o `/tablero?etapa=ingreso|bodega|facturacion|despacho` (una TV por área). Solo lectura, estilo aeropuerto: fondo oscuro, letra escalada a la pantalla, orden por riesgo, paginación automática cada 10 s, pantalla siempre encendida y recarga de datos cada 30 s. Se abre desde el menú lateral ("Tablero para TV"). `vercel.json` reescribe las rutas a `index.html` para que `/tablero` funcione en Vercel.
+- `BoardView` — **tablero para TV** en `/tablero` (todas las etapas: pedidos en curso, todos los entregados al final y las anomalías del día) o `/tablero?etapa=ingreso|bodega|facturacion|despacho` (una TV por área). Solo lectura, estilo aeropuerto: fondo oscuro, letra escalada a la pantalla, orden por riesgo, lista fija que se recorre con el scroll del mouse, pantalla siempre encendida y recarga de datos cada 30 s. Se abre desde el menú lateral ("Tablero para TV"). `vercel.json` reescribe las rutas a `index.html` para que `/tablero` funcione en Vercel.
 - `Toast` — confirmación (o error) de cada acción: crear, finalizar etapa, corregir, cancelar, guardar SLA, push.
 - `App` — componente raíz: sesión, carga de `orders`/`app_settings` con Realtime, navegación (pedidos/reportes), service worker y push, deep-link (`?order=ID`) y los handlers `handle*` que delegan en `services/`.
 
@@ -214,7 +230,8 @@ Qué hace cada componente:
 8. **Centro de notificaciones** (antes "simulación de WhatsApp"): log de hitos por pedido, visible en el detalle.
 9. **Campanita de alertas global** en el header, con contador de pedidos en riesgo de SLA.
 10. **PWA instalable** con **notificaciones push reales** (no simuladas): la función `sla-push-check` corre cada 3 minutos vía `pg_cron`, detecta pedidos con SLA en riesgo, y empuja notificaciones a todos los dispositivos suscritos. Clic en la notificación abre la app directo en ese pedido.
-11. **Datos en tiempo real** entre dispositivos (Supabase Realtime): si dos personas tienen la app abierta, ambas ven los cambios del otro sin recargar.
+11. **Origen de la venta, pago y preventa**: origen obligatorio en la Etapa 1 (opciones administradas en Configuración); "Pagado" + comprobante (foto/PDF) en cualquier etapa, con quién/cuándo en la auditoría; stand by con motivo en cualquier etapa (congela el SLA hasta reanudar) y preventa como stand by automático antes de Bodega.
+12. **Datos en tiempo real** entre dispositivos (Supabase Realtime): si dos personas tienen la app abierta, ambas ven los cambios del otro sin recargar.
 
 ## Pendiente / roadmap (mencionado por el usuario, aún no construido)
 - **WhatsApp Business API real** (Meta Cloud API) para reemplazar el "Centro de notificaciones" simulado — investigado pero no implementado. Nota importante ya investigada: Meta lanzó en 2026 una API oficial de Grupos (máx. 8 participantes, requiere cuenta "Official Business Account"); la alternativa más simple es notificación individual a una lista de números vía Cloud API estándar, sin necesitar esa verificación especial.

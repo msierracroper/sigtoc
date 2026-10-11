@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronLeft, CheckCircle2, AlertTriangle, ClipboardList, Bell } from "lucide-react";
+import { ChevronLeft, CheckCircle2, AlertTriangle, ClipboardList, Bell, Hourglass, PackageCheck, PauseCircle, PlayCircle } from "lucide-react";
 import { STAGES } from "../../constants/stages";
 import { fmtShort, fmtMinutes, fmtElapsed, shortUser } from "../../utils/format";
 import { slaStatus } from "../../utils/sla";
@@ -7,9 +7,42 @@ import { OrderStatusBadge } from "../ui/Badge";
 import Button from "../ui/Button";
 import Banner from "../ui/Banner";
 import { SlaMeter } from "../ui/Meter";
-import CancelBox from "./CancelBox";
+import IssueActions from "./IssueActions";
 import StageForm from "./stages/StageForm";
 import StageHistoryModal from "./stages/StageHistoryModal";
+import PaymentPanel from "./PaymentPanel";
+import OrderDataSummary from "./OrderDataSummary";
+
+// Stand by: el pedido está quieto en su etapa y el SLA congelado hasta que alguien lo reanude.
+// La preventa es un stand by automático al finalizar Ingreso.
+function StandByCard({ order, sla, onResume }) {
+  const [busy, setBusy] = useState(false);
+  const p = sla.pause;
+  const preorder = p.kind === "preventa";
+  return (
+    <div className="p-5 sm:p-6">
+      <div className="flex items-start gap-3">
+        <span className="w-10 h-10 rounded-xl bg-infoBg text-info grid place-items-center flex-none">{preorder ? <Hourglass size={20} /> : <PauseCircle size={20} />}</span>
+        <div className="min-w-0">
+          <h2 className="text-[16px] font-semibold">{preorder ? "Preventa en espera de mercancía" : "Pedido en stand by"}</h2>
+          <p className="mt-1"><span className="text-ink2">Motivo: </span>{p.reason}</p>
+          <p className="text-[12.5px] text-ink2 mt-1.5 num">Desde {fmtShort(p.since)} por {shortUser(p.by)} · etapa {order.current_stage} ({STAGES[order.current_stage - 1].short})</p>
+          <p className="text-[12.5px] text-ink2 mt-0.5 num">SLA congelado en {fmtElapsed(sla.elapsedMin)} de {sla.limitMin} min</p>
+        </div>
+      </div>
+      <div className="mt-5 pt-5 border-t border-line2">
+        <OrderDataSummary order={order} />
+      </div>
+      <div className="mt-5 sticky bottom-0 -mx-5 px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] bg-surface border-t border-line2 sm:static sm:mx-0 sm:px-0 sm:pb-0 sm:border-0">
+        <Button variant="primary" size="lg" icon={preorder ? PackageCheck : PlayCircle} busy={busy} className="w-full sm:w-auto"
+          onClick={async () => { setBusy(true); await onResume(); setBusy(false); }}>
+          {preorder ? "Llegó la mercancía · reanudar" : "Reanudar pedido"}
+        </Button>
+        <p className="text-[12.5px] text-ink2 mt-2">El SLA continúa desde donde quedó; el tiempo en stand by no cuenta.</p>
+      </div>
+    </div>
+  );
+}
 
 function Stepper({ order, sla, onView }) {
   return (
@@ -18,9 +51,10 @@ function Stepper({ order, sla, onView }) {
         const stg = order.stages[s.id] || {};
         const done = !!stg.completedAt;
         const active = order.status === "abierto" && order.current_stage === s.id;
+        const paused = active && sla?.paused;
         const versions = (stg.editHistory?.length || 0) + 1;
         const ring = done ? "bg-okBg text-ok" : active
-          ? sla?.state === "excedido" ? "bg-critBg text-crit ring-2 ring-critBar" : sla?.state === "alerta" ? "bg-warnBg text-warn ring-2 ring-warnBar" : "bg-infoBg text-info ring-2 ring-link"
+          ? sla?.paused ? "bg-infoBg text-info ring-2 ring-[#9BB8F0]" : sla?.state === "excedido" ? "bg-critBg text-crit ring-2 ring-critBar" : sla?.state === "alerta" ? "bg-warnBg text-warn ring-2 ring-warnBar" : "bg-infoBg text-info ring-2 ring-link"
           : "bg-surface2 text-ink3";
         return (
           <li key={s.id} className="relative flex-1 flex items-start">
@@ -35,7 +69,7 @@ function Stepper({ order, sla, onView }) {
               <span className={`text-[12.5px] font-semibold leading-tight ${done || active ? "text-ink" : "text-ink3"}`}>{s.short}</span>
               {done
                 ? <span className="mt-0.5 h-7 sm:h-6 px-2 rounded-md inline-flex items-center text-[12px] sm:text-[11.5px] font-semibold text-ink bg-surface shadow-[inset_0_0_0_1px_#E3E3E3,0_1px_0_rgba(0,0,0,.05)]">Ver detalle</span>
-                : <span className="text-[11.5px] leading-tight text-ink3">{active ? "En curso" : "Pendiente"}</span>}
+                : <span className="text-[11.5px] leading-tight text-ink3">{paused ? "Stand by" : active ? "En curso" : "Pendiente"}</span>}
             </button>
           </li>
         );
@@ -44,10 +78,13 @@ function Stepper({ order, sla, onView }) {
   );
 }
 
-export default function OrderDetail({ order, now, slaSettings, onBack, onFinalizeStage, onCancelOrder, onEditStage }) {
+export default function OrderDetail({ order, now, slaSettings, origins, onBack, onFinalizeStage, onCancelOrder, onEditStage, onSetPaid, onSetProof, onPause, onResume, onSetPickup, onSaveDraft, carriers }) {
   const [viewingStage, setViewingStage] = useState(null);
   const sla = slaStatus(order, slaSettings, now);
   const stage = STAGES[order.current_stage - 1];
+  const origen = order.stages[1]?.data?.origen;
+  const paused = !!sla?.paused;
+  const paymentInForm = order.status === "abierto" && order.current_stage === 1; // en Etapa 1 el pago va dentro del formulario
 
   return (
     <div className="max-w-[1200px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
@@ -56,7 +93,7 @@ export default function OrderDetail({ order, now, slaSettings, onBack, onFinaliz
       <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5">
         <h1 className="text-[20px] sm:text-[22px] font-bold tracking-tight num">{order.id}</h1>
         <div className="mt-1"><OrderStatusBadge order={order} sla={sla} /></div>
-        <p className="w-full text-ink2 text-[14px]">{order.cliente} · creado {fmtShort(order.created_at)} por {shortUser(order.created_by_email)}</p>
+        <p className="w-full text-ink2 text-[14px]">{order.cliente}{origen ? ` · ${origen}` : ""} · creado {fmtShort(order.created_at)} por {shortUser(order.created_by_email)}</p>
       </div>
 
       {order.status === "cancelado" && order.cancel_info && (
@@ -81,7 +118,13 @@ export default function OrderDetail({ order, now, slaSettings, onBack, onFinaliz
               <AlertTriangle size={30} className="mx-auto mb-2 text-warnBar" />
               <p className="text-[15px] font-semibold">Pedido detenido</p>
               <p className="text-ink2 mt-1">No admite más etapas. El motivo quedó registrado arriba y en la auditoría.</p>
+              <div className="mt-6 text-left"><OrderDataSummary order={order} /></div>
             </div>
+          ) : paused ? (
+            <>
+              <StandByCard order={order} sla={sla} onResume={onResume} />
+              <div className="px-4 sm:px-5 pb-4"><IssueActions canPause={false} onCancel={onCancelOrder} /></div>
+            </>
           ) : (
             <>
               <div className="px-4 sm:px-5 pt-4 sm:pt-5 pb-4 border-b border-line2">
@@ -100,15 +143,17 @@ export default function OrderDetail({ order, now, slaSettings, onBack, onFinaliz
                 )}
               </div>
               <div className="p-4 sm:p-5">
-                <StageForm key={`${order.id}-${order.current_stage}`} orderId={order.id} stageId={order.current_stage}
+                <StageForm key={`${order.id}-${order.current_stage}`} order={order} orderId={order.id} stageId={order.current_stage}
+                  origins={origins} carriers={carriers} onSetPaid={onSetPaid} onSetProof={onSetProof} onSetPickup={onSetPickup} onSaveDraft={onSaveDraft}
                   onFinalize={(data) => onFinalizeStage(order.current_stage, data)} />
-                <CancelBox onCancel={onCancelOrder} />
+                <IssueActions onPause={onPause} onCancel={onCancelOrder} />
               </div>
             </>
           )}
         </section>
 
         <aside className="lg:col-span-5 space-y-4">
+          {!paymentInForm && <PaymentPanel order={order} onSetPaid={onSetPaid} onSetProof={onSetProof} readOnly={order.status === "cancelado"} />}
           <div className="card">
             <h3 className="flex items-center gap-2 px-4 pt-4 pb-2 font-semibold"><ClipboardList size={16} className="text-ink2" /> Registro de auditoría</h3>
             <ol className="px-4 pb-3 max-h-64 overflow-y-auto">
@@ -136,7 +181,7 @@ export default function OrderDetail({ order, now, slaSettings, onBack, onFinaliz
 
       {viewingStage && (
         <StageHistoryModal orderId={order.id} stage={viewingStage} stageData={order.stages[viewingStage.id]}
-          onClose={() => setViewingStage(null)} onSaveEdit={(newData) => onEditStage(viewingStage.id, newData)} />
+          origins={origins} carriers={carriers} onClose={() => setViewingStage(null)} onSaveEdit={(newData) => onEditStage(viewingStage.id, newData)} />
       )}
     </div>
   );

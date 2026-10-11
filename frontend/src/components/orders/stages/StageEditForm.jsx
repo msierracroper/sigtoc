@@ -3,38 +3,40 @@ import Button from "../../ui/Button";
 import PdfUploader from "../../documents/PdfUploader";
 import GuideUploader from "../../documents/GuideUploader";
 import SerialListEditor from "./SerialListEditor";
-import { DeliveryModePicker } from "./StageForm";
+import { DeliveryModePicker, OriginSelect, CarrierSelect } from "./StageForm";
+import { emptyItem, itemsFromData, stageDataFromItems } from "../../../utils/items";
 
-export default function StageEditForm({ orderId, stageId, data, onSave, onCancel, busy }) {
+export default function StageEditForm({ orderId, stageId, data, onSave, onCancel, busy, origins, carriers }) {
+  const [transportadora, setTransportadora] = useState(data?.transportadora || "");
+  const [origen, setOrigen] = useState(data?.origen || "");
   const [pdfPath, setPdfPath] = useState(data?.pdfPath || null);
   const [rutPath, setRutPath] = useState(data?.rutPath || null);
-  const [serialesList, setSerialesList] = useState(
-    data?.serialesList?.length ? data.serialesList : (data?.seriales && data.seriales !== "Sin serial" ? data.seriales.split(",").map((s) => s.trim()).filter(Boolean) : [""])
-  );
+  const [items, setItems] = useState(() => { const it = itemsFromData(data); return it.length ? it : [emptyItem()]; });
   const [factura, setFactura] = useState(data?.factura || "");
   const [modo, setModo] = useState(data?.modo || "guia");
   const [guiaNumero, setGuiaNumero] = useState(data?.guiaNumero || "");
   const [guiaFilePath, setGuiaFilePath] = useState(data?.guiaFilePath || null);
 
   function save() {
-    if (stageId === 1) onSave({ pdfPath, rutPath });
+    if (stageId === 1) onSave({ ...data, pdfPath, rutPath, origen: origen || null });
     else if (stageId === 2) {
-      const clean = serialesList.map((s) => s.trim()).filter(Boolean);
-      onSave({ serialesList: clean, seriales: clean.length ? clean.join(", ") : "Sin serial" });
+      onSave(stageDataFromItems(items, false));
     }
     else if (stageId === 3) onSave({ factura });
-    else onSave({ modo, guiaNumero: guiaNumero.trim() || null, guiaFilePath });
+    else onSave({ ...data, modo, transportadora: modo === "guia" ? transportadora || null : null, guiaNumero: guiaNumero.trim() || null, guiaFilePath });
   }
 
   return (
     <div className="space-y-3">
+      {stageId === 1 && <OriginSelect value={origen} onChange={setOrigen} origins={origins} />}
+      {stageId === 1 && data?.preventa && <p className="text-[12.5px] text-ink2">Pedido de preventa (no se puede cambiar después de finalizar Ingreso).</p>}
       {stageId === 1 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <PdfUploader orderId={orderId} kind="pedido" label="PDF del pedido" uploadedPath={pdfPath} onUploaded={setPdfPath} />
           <PdfUploader orderId={orderId} kind="rut" label="RUT (opcional)" uploadedPath={rutPath} onUploaded={setRutPath} />
         </div>
       )}
-      {stageId === 2 && <SerialListEditor list={serialesList} setList={setSerialesList} disabled={false} />}
+      {stageId === 2 && <SerialListEditor items={items} setItems={setItems} disabled={false} />}
       {stageId === 3 && (
         <div>
           <label className="label" htmlFor="factura-edit">Número de factura</label>
@@ -46,6 +48,7 @@ export default function StageEditForm({ orderId, stageId, data, onSave, onCancel
           <DeliveryModePicker value={modo} onChange={setModo} />
           {modo === "guia" && (
             <>
+              <CarrierSelect value={transportadora} onChange={setTransportadora} carriers={carriers} />
               <div>
                 <label className="label" htmlFor="guia-edit">Número de guía</label>
                 <input id="guia-edit" value={guiaNumero} onChange={(e) => setGuiaNumero(e.target.value)} className="field" />

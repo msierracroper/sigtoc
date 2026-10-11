@@ -10,12 +10,24 @@ const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 const STAGE_NAMES = { 1: "Ingreso de Pedido", 2: "Bodega", 3: "Facturación", 4: "Despacho y Entrega" };
 
+// Debe mantenerse alineado con slaStatus() de frontend/src/utils/sla.js.
+// El tiempo en stand by (stages[n].pauses) no cuenta; con una pausa abierta el pedido no se evalúa.
+function pausedMs(st, untilMs) {
+  return (st?.pauses || []).reduce((acc, p) => {
+    const start = new Date(p.since).getTime();
+    const end = p.until ? new Date(p.until).getTime() : untilMs;
+    return acc + Math.max(0, Math.min(end, untilMs) - start);
+  }, 0);
+}
+
 function slaState(order, globalSla, now) {
   const stage = order.current_stage;
   const st = order.stages?.[stage];
   if (!st?.startedAt) return null;
+  const pauses = st.pauses || [];
+  if (pauses.length && !pauses[pauses.length - 1].until) return null; // en stand by: SLA congelado, sin alertas
   const limitMin = order.sla_config?.[stage] ?? globalSla?.[stage] ?? 30;
-  const elapsedMin = (now - new Date(st.startedAt).getTime()) / 60000;
+  const elapsedMin = (now - new Date(st.startedAt).getTime() - pausedMs(st, now)) / 60000;
   if (elapsedMin >= limitMin) return "excedido";
   if (elapsedMin >= limitMin * 0.75) return "alerta";
   return "ok";

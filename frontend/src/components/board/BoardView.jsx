@@ -6,12 +6,12 @@ import { fmtMinutes } from "../../utils/format";
 
 /* ============ TABLERO (modo TV) ============
  * Vista de solo lectura para pantallas grandes, estilo tablero de aeropuerto.
- * /tablero                 → todos los pedidos en curso + entregados/anomalías del día
+ * /tablero                 → pedidos en curso + todos los entregados (al final, del más reciente al más antiguo) + anomalías del día
  * /tablero?etapa=bodega     → solo los pedidos abiertos en esa etapa (una TV por área)
  * Tamaños en vh/vw para que se lea igual en una TV 1080p, 4K o un monitor.
+ * Lista fija (sin cambio automático de página): si hay más pedidos de los que caben, se recorre con el scroll del mouse.
  */
-const ROWS_PER_PAGE = 9;
-const PAGE_SECONDS = 10;
+const ROW_HEIGHT_VH = 76 / 9; // ~9 filas visibles a la vez
 
 const STAGE_PARAM = { ingreso: 1, bodega: 2, facturacion: 3, "facturación": 3, despacho: 4 };
 const STAGE_DOT = { 1: "#7FB0F5", 2: "#F5B700", 3: "#B78CF7", 4: "#5FD3C4" };
@@ -36,6 +36,7 @@ function isToday(iso) {
 function rowStatus(o, sla) {
   if (o.status === "cerrado") return { label: "ENTREGADO", color: PAL.dim };
   if (o.status === "cancelado") return { label: "ANOMALÍA", color: "#C9776F" };
+  if (sla?.paused) return { label: sla.pause?.kind === "preventa" ? "PREVENTA" : "STAND BY", color: "#7FB0F5" };
   if (sla?.state === "excedido") return { label: "EXCEDIDO", color: PAL.red };
   if (sla?.state === "alerta") return { label: "POR VENCER", color: PAL.amber };
   return { label: "A TIEMPO", color: PAL.green };
@@ -43,6 +44,7 @@ function rowStatus(o, sla) {
 
 function timeText(o, sla) {
   if (o.status !== "abierto" || !sla) return "—";
+  if (sla.paused) return "En pausa";
   if (sla.state === "excedido") return `+${fmtMinutes(-sla.remainingMin)}`;
   return `${fmtMinutes(sla.remainingMin)}`;
 }
@@ -81,7 +83,6 @@ function useIdle(ms = 3000) {
 
 export default function BoardView({ orders, slaSettings, now, lastUpdate, onExit }) {
   const stage = useMemo(boardStageFromUrl, []);
-  const [page, setPage] = useState(0);
   const idle = useIdle();
   const rootRef = useRef(null);
   useWakeLock();
@@ -89,18 +90,10 @@ export default function BoardView({ orders, slaSettings, now, lastUpdate, onExit
   const rows = useMemo(() => {
     const visible = orders.filter((o) => stage
       ? o.status === "abierto" && o.current_stage === stage
-      : o.status === "abierto" || ((o.status === "cerrado" || o.status === "cancelado") && isToday(o.updated_at)));
+      : o.status === "abierto" || o.status === "cerrado" || (o.status === "cancelado" && isToday(o.updated_at)));
     return sortByRisk(visible, slaSettings, now);
   }, [orders, slaSettings, now, stage]);
 
-  const pages = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
-  useEffect(() => { if (page >= pages) setPage(0); }, [pages, page]);
-  useEffect(() => {
-    const t = setInterval(() => setPage((p) => (p + 1) % pages), PAGE_SECONDS * 1000);
-    return () => clearInterval(t);
-  }, [pages]);
-
-  const pageRows = rows.slice(page * ROWS_PER_PAGE, page * ROWS_PER_PAGE + ROWS_PER_PAGE);
   const open = rows.filter((x) => x.o.status === "abierto");
   const over = open.filter((x) => x.sla?.state === "excedido").length;
   const warn = open.filter((x) => x.sla?.state === "alerta").length;
@@ -140,7 +133,7 @@ export default function BoardView({ orders, slaSettings, now, lastUpdate, onExit
       </div>
 
       {/* Filas */}
-      <main className="flex-1 flex flex-col min-h-0">
+      <main className="board-scroll flex-1 flex flex-col min-h-0 overflow-y-auto overscroll-contain">
         {rows.length === 0 ? (
           <div className="flex-1 grid place-items-center text-center">
             <div>
@@ -149,12 +142,12 @@ export default function BoardView({ orders, slaSettings, now, lastUpdate, onExit
             </div>
           </div>
         ) : (
-          pageRows.map(({ o, sla }, i) => {
+          rows.map(({ o, sla }, i) => {
             const st = rowStatus(o, sla);
             const closed = o.status !== "abierto";
             return (
               <div key={o.id} className={`grid ${cols} items-center px-[2.2vw] flex-none`}
-                style={{ height: `${76 / ROWS_PER_PAGE}vh`, background: i % 2 ? PAL.rowAlt : PAL.row, borderBottom: `1px solid ${PAL.line}`, opacity: closed ? 0.55 : 1 }}>
+                style={{ height: `${ROW_HEIGHT_VH}vh`, background: i % 2 ? PAL.rowAlt : PAL.row, borderBottom: `1px solid ${PAL.line}`, opacity: closed ? 0.55 : 1 }}>
                 <span className="font-semibold text-[2.6vh] truncate pr-[1vw]">{o.id.replace(/^PED-\d{4}-/, "")}</span>
                 <span className="text-[2.9vh] font-medium truncate pr-[1.5vw]">{o.cliente}</span>
                 {!stage && <span className="flex items-center gap-[0.8vw] text-[2.6vh] truncate">
@@ -171,14 +164,9 @@ export default function BoardView({ orders, slaSettings, now, lastUpdate, onExit
         )}
       </main>
 
-      {/* Pie: página actual con barra de avance */}
+      {/* Pie: total de pedidos en el tablero */}
       <footer className="h-[6vh] flex-none flex items-center gap-[2vw] px-[2.2vw] text-[1.8vh] font-semibold tracking-[.12em]" style={{ background: PAL.header, borderTop: `1px solid ${PAL.line}`, color: PAL.dim }}>
-        <span>PÁGINA {page + 1} DE {pages}</span>
-        {pages > 1 && (
-          <span className="flex-1 h-[0.5vh] rounded-full overflow-hidden" style={{ background: PAL.line }}>
-            <span key={`${page}-${pages}`} className="block h-full rounded-full" style={{ background: PAL.paint, animation: `boardProgress ${PAGE_SECONDS}s linear forwards` }} />
-          </span>
-        )}
+        <span>{rows.length} PEDIDO{rows.length !== 1 ? "S" : ""}</span>
         <span className="ml-auto tracking-normal font-normal">TIEMPO = restante en la etapa · “+” = excedido</span>
       </footer>
 

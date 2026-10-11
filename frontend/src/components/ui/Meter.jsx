@@ -1,7 +1,7 @@
 import React from "react";
 import { STAGES } from "../../constants/stages";
 
-const BAR = { excedido: "bg-critBar", alerta: "bg-warnBar", ok: "bg-okBar" };
+const BAR = { excedido: "bg-critBar", alerta: "bg-warnBar", ok: "bg-okBar", pausa: "bg-infoBar" };
 
 // Barra de consumo del SLA de la etapa (verde → ámbar al 75 % → rojo al 100 %)
 export function SlaMeter({ sla, className = "" }) {
@@ -24,7 +24,7 @@ export function StageTrack({ order, sla, className = "" }) {
         let cls = "bg-line2";
         if (closed) cls = done || (order.status === "cancelado" && s.id <= order.current_stage) ? "bg-[#B5B5B5]" : "bg-line2";
         else if (done) cls = "bg-okBar";
-        else if (active) cls = sla?.state === "excedido" ? "bg-critBar" : sla?.state === "alerta" ? "bg-warnBar" : "bg-infoBar";
+        else if (active) cls = sla?.paused ? "bg-infoBar" : sla?.state === "excedido" ? "bg-critBar" : sla?.state === "alerta" ? "bg-warnBar" : "bg-infoBar";
         return <span key={s.id} className={`flex-1 h-1 rounded-full ${cls}`} />;
       })}
     </div>

@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DEFAULT_SLA, STAGES } from "./constants/stages";
 import { slaStatus, isAtRisk } from "./utils/sla";
 import * as auth from "./services/auth";
 import * as ordersApi from "./services/orders";
 import { fetchSlaSettings, saveSlaSettings } from "./services/settings";
 import { subscribeToChanges } from "./services/realtime";
+import { fetchCatalog, createCatalogItem, updateCatalogItem } from "./services/catalogs";
 import { isPushSupported, registerServiceWorker, getPushSubscription, subscribePush, unsubscribePush } from "./services/push";
 import LoginScreen from "./components/auth/LoginScreen";
 import AppShell from "./components/layout/AppShell";
@@ -13,6 +14,7 @@ import OrderDetail from "./components/orders/OrderDetail";
 import NewOrderModal from "./components/orders/NewOrderModal";
 import ReportsView from "./components/reports/ReportsView";
 import SlaSettingsModal from "./components/settings/SlaSettingsModal";
+import CatalogModal from "./components/settings/CatalogModal";
 import Toast from "./components/ui/Toast";
 import BoardView from "./components/board/BoardView";
 
@@ -49,10 +51,15 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [showSlaSettings, setShowSlaSettings] = useState(false);
+  const [catalogModal, setCatalogModal] = useState(null); // "origins" | "carriers" | null
+  const [origins, setOrigins] = useState([]); // null = no se pudieron cargar
+  const [carriers, setCarriers] = useState([]);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [toast, setToast] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [lastUpdate, setLastUpdate] = useState(null);
+  const ordersRef = useRef(orders); // versión más reciente, para guardados en segundo plano (borradores)
+  ordersRef.current = orders;
 
   const notify = useCallback((message, tone = "success") => setToast({ message, tone, id: Date.now() }), []);
   const closeToast = useCallback(() => setToast(null), []);
@@ -103,6 +110,11 @@ export default function App() {
     if (data) { setOrders(data); setLastUpdate(Date.now()); }
   }
 
+  async function loadCatalog(kind) {
+    const items = await fetchCatalog(kind);
+    (kind === "origins" ? setOrigins : setCarriers)(items);
+  }
+
   async function loadSlaSettings() {
     const sla = await fetchSlaSettings();
     if (sla) setSlaSettings(sla);
@@ -112,6 +124,7 @@ export default function App() {
     if (!session) return;
     loadOrders();
     loadSlaSettings();
+    if (!IS_BOARD) { loadCatalog("origins"); loadCatalog("carriers"); }
     const unsubscribe = subscribeToChanges({ onOrders: loadOrders, onSettings: loadSlaSettings });
     const poll = IS_BOARD ? setInterval(() => { loadOrders(); loadSlaSettings(); }, BOARD_REFRESH_MS) : null;
     return () => { unsubscribe(); if (poll) clearInterval(poll); };
@@ -157,13 +170,88 @@ export default function App() {
     notify(`${STAGES[stageId - 1].name} corregida: v${(order.stages[stageId].editHistory?.length || 0) + 2}.`);
   }
 
+  // Catálogos de Configuración: orígenes de venta y transportadoras
+  async function handleCreateCatalogItem(kind, name) {
+    const { error } = await createCatalogItem(kind, name, session.user.id);
+    if (error) { notify(error.code === "23505" ? "Ya existe una opción con ese nombre." : SAVE_ERROR, "error"); return false; }
+    await loadCatalog(kind);
+    notify(`“${name}” agregado.`);
+    return true;
+  }
+
+  async function handleUpdateCatalogItem(kind, id, changes) {
+    const { error } = await updateCatalogItem(kind, id, changes);
+    if (error) { notify(error.code === "23505" ? "Ya existe una opción con ese nombre." : SAVE_ERROR, "error"); return false; }
+    await loadCatalog(kind);
+    return true;
+  }
+
+  // Despacho: recogido por la transportadora, pendiente de guía (el SLA sigue contando)
+  async function handleSetPickup(pending, transportadora) {
+    const order = orders.find((o) => o.id === selectedId);
+    if (!order) return;
+    const { error } = await ordersApi.setPickupPending(order, pending, transportadora, session.user.email);
+    if (error) { notify(SAVE_ERROR, "error"); return; }
+    await loadOrders();
+    notify(pending ? `Registrado: ${order.id} recogido por ${transportadora}, guía pendiente.` : `Se desmarcó "recogido, pendiente de guía" en ${order.id}.`);
+  }
+
+  // Borrador de la etapa activa (guardado automático, sin aviso; solo avisa si falla)
+  async function handleSaveDraft(orderId, stageId, draft) {
+    const order = ordersRef.current.find((o) => o.id === orderId);
+    if (!order || order.status !== "abierto" || order.current_stage !== stageId) return { error: null };
+    const { error, stages } = await ordersApi.saveStageDraft(order, stageId, draft);
+    if (!error) setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, stages } : o)));
+    return { error };
+  }
+
+  // Pago y preventa (cualquier etapa)
+  async function handleSetPaid(paid) {
+    const order = orders.find((o) => o.id === selectedId);
+    if (!order) return;
+    const { error } = await ordersApi.setPaid(order, paid, session.user.email);
+    if (error) { notify(SAVE_ERROR, "error"); return; }
+    await loadOrders();
+    notify(paid ? `Pedido ${order.id} marcado como pagado.` : `Se desmarcó el pago de ${order.id}.`);
+  }
+
+  async function handleSetProof(path) {
+    const order = orders.find((o) => o.id === selectedId);
+    if (!order) return;
+    const { error } = await ordersApi.setPaymentProof(order, path, session.user.email);
+    if (error) { notify(SAVE_ERROR, "error"); return; }
+    await loadOrders();
+    notify(path ? "Comprobante de pago cargado." : "Comprobante de pago quitado.");
+  }
+
+  // Stand by: congela el SLA hasta reanudar (la preventa es un stand by automático)
+  async function handlePause(reason) {
+    const order = orders.find((o) => o.id === selectedId);
+    if (!order) return;
+    const { error } = await ordersApi.pauseOrder(order, reason, session.user.email);
+    if (error) { notify(SAVE_ERROR, "error"); return; }
+    await loadOrders();
+    notify(`Pedido ${order.id} en stand by: su SLA quedó congelado.`);
+  }
+
+  async function handleResume() {
+    const order = orders.find((o) => o.id === selectedId);
+    if (!order) return;
+    const { error } = await ordersApi.resumeOrder(order, session.user.email);
+    if (error) { notify(SAVE_ERROR, "error"); return; }
+    await loadOrders();
+    notify(`Pedido ${order.id} reanudado: el SLA de ${STAGES[order.current_stage - 1].short} sigue desde donde quedó.`);
+  }
+
   async function handleFinalizeStage(stageId, data) {
     const order = orders.find((o) => o.id === selectedId);
     if (!order) return;
     const { error } = await ordersApi.finalizeStage(order, stageId, data, session.user.email);
     if (error) { notify(SAVE_ERROR, "error"); return; }
     await loadOrders();
-    notify(stageId < 4 ? `Etapa ${STAGES[stageId - 1].short} finalizada: ${order.id} pasó a ${STAGES[stageId].short}.` : `Pedido ${order.id} entregado y cerrado.`);
+    notify(stageId === 1 && data.preventa
+      ? `Etapa Ingreso finalizada: ${order.id} queda en stand by hasta que llegue la mercancía (preventa).`
+      : stageId < 4 ? `Etapa ${STAGES[stageId - 1].short} finalizada: ${order.id} pasó a ${STAGES[stageId].short}.` : `Pedido ${order.id} entregado y cerrado.`);
   }
 
   if (session === undefined) {
@@ -187,13 +275,15 @@ export default function App() {
       <AppShell
         email={session.user.email} page={page} ordersView={ordersTab} alertsCount={alertsCount}
         orders={orders} slaSettings={slaSettings} now={now} search={search} onSearch={setSearch}
-        onNavigate={navigate} onOpenOrder={openOrder} onOpenSla={() => setShowSlaSettings(true)}
+        onNavigate={navigate} onOpenOrder={openOrder} onOpenSla={() => setShowSlaSettings(true)} onOpenOrigins={() => setCatalogModal("origins")} onOpenCarriers={() => setCatalogModal("carriers")}
         pushEnabled={pushEnabled} onTogglePush={togglePush} onLogout={() => auth.signOut()}>
         {page === "reports" ? (
           <ReportsView orders={orders} slaSettings={slaSettings} now={now} onOpenOrder={openOrder} />
         ) : selected ? (
-          <OrderDetail order={selected} now={now} slaSettings={slaSettings} onBack={() => setSelectedId(null)}
-            onFinalizeStage={handleFinalizeStage} onCancelOrder={handleCancelOrder} onEditStage={handleEditStage} />
+          <OrderDetail order={selected} now={now} slaSettings={slaSettings} origins={origins} carriers={carriers} onSetPickup={handleSetPickup} onBack={() => setSelectedId(null)}
+            onFinalizeStage={handleFinalizeStage} onCancelOrder={handleCancelOrder} onEditStage={handleEditStage}
+            onSetPaid={handleSetPaid} onSetProof={handleSetProof} onPause={handlePause} onResume={handleResume}
+            onSaveDraft={(stageId, draft) => handleSaveDraft(selected.id, stageId, draft)} />
         ) : (
           <OrdersPage orders={orders} now={now} slaSettings={slaSettings} tab={ordersTab} onTabChange={setOrdersTab}
             search={search} onSearch={setSearch} onOpen={openOrder} onNew={() => setShowNewOrder(true)} />
@@ -201,6 +291,10 @@ export default function App() {
       </AppShell>
 
       {showNewOrder && <NewOrderModal onClose={() => setShowNewOrder(false)} onCreate={handleCreate} />}
+      {catalogModal && (
+        <CatalogModal kind={catalogModal} items={(catalogModal === "origins" ? origins : carriers) || []} onClose={() => setCatalogModal(null)}
+          onCreate={(name) => handleCreateCatalogItem(catalogModal, name)} onUpdate={(id, changes) => handleUpdateCatalogItem(catalogModal, id, changes)} />
+      )}
       {showSlaSettings && <SlaSettingsModal current={slaSettings} onClose={() => setShowSlaSettings(false)} onSave={handleSaveSlaSettings} />}
       <Toast toast={toast} onClose={closeToast} />
     </>

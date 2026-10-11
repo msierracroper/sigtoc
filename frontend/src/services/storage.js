@@ -7,13 +7,19 @@ export async function uploadOrderPdf(orderId, kind, file) {
   return { path, error };
 }
 
-// Guía de envío de la Etapa 4 (PDF o imagen) -> {orderId}/guia-{timestamp}.{ext}
-export async function uploadGuideFile(orderId, file) {
+// Archivo libre (PDF o imagen) -> {orderId}/{prefix}-{timestamp}.{ext}
+async function uploadOrderFile(orderId, prefix, file) {
   const ext = (file.name.split(".").pop() || "pdf").toLowerCase().replace(/[^a-z0-9]/g, "") || "pdf";
-  const path = `${orderId}/guia-${Date.now()}.${ext}`;
+  const path = `${orderId}/${prefix}-${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from(PDF_BUCKET).upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
   return { path, error };
 }
+
+// Guía de envío de la Etapa 4
+export function uploadGuideFile(orderId, file) { return uploadOrderFile(orderId, "guia", file); }
+
+// Comprobante de pago (foto o PDF)
+export function uploadPaymentProof(orderId, file) { return uploadOrderFile(orderId, "pago", file); }
 
 // Abre el documento en una pestaña nueva con una URL firmada de 60 s (el bucket es privado)
 export async function openDocument(path) {

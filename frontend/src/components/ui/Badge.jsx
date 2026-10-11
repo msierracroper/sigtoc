@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertCircle, AlertTriangle } from "lucide-react";
+import { AlertCircle, AlertTriangle, Hourglass, PauseCircle } from "lucide-react";
 import { fmtMinutes } from "../../utils/format";
 
 const TONES = {
@@ -22,6 +22,10 @@ export default function Badge({ tone = "neutral", icon: Icon, children, title, c
 // Estado de SLA de un pedido abierto. El color nunca va solo: siempre lleva ícono + texto.
 export function SlaBadge({ sla, compact }) {
   if (!sla) return null;
+  if (sla.paused) {
+    const pre = sla.pause?.kind === "preventa";
+    return <Badge tone="info" icon={pre ? Hourglass : PauseCircle} title={`SLA congelado. Motivo: ${sla.pause?.reason || ""}`}>{pre ? "Preventa en espera" : "En stand by"}</Badge>;
+  }
   if (sla.state === "excedido") {
     return <Badge tone="critical" icon={AlertCircle} title={`Superó el límite de ${sla.limitMin} min`}>{compact ? "Excedido" : `Excedido +${fmtMinutes(-sla.remainingMin)}`}</Badge>;
   }

@@ -30,10 +30,10 @@ export default function FileSlot({ label, required, uploadedPath, busy, error, a
         {uploadedPath ? (
           <>
             <Button size="sm" icon={ExternalLink} onClick={() => openDocument(uploadedPath)}>Ver documento</Button>
-            <FilePickButton accept={accept} onFile={onFile} disabled={busy} variant="secondary" icon={RefreshCw}>Reemplazar</FilePickButton>
+            {onFile && <FilePickButton accept={accept} onFile={onFile} disabled={busy} variant="secondary" icon={RefreshCw}>Reemplazar</FilePickButton>}
             {onRemove && <Button size="sm" icon={Trash2} onClick={onRemove}>Quitar</Button>}
           </>
-        ) : (
+        ) : onFile && (
           <FilePickButton accept={accept} onFile={onFile} disabled={busy} variant="secondary" icon={Upload}>Elegir archivo</FilePickButton>
         )}
       </div>
