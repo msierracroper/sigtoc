@@ -1,3 +1,3 @@
-¿Qué pedido se te está atrasando ahora mismo? SIGTOC lo responde de un vistazo: cada pedido ordenado por su SLA en el PC, Bodega escaneando referencia y serial desde el celular, y el tablero en vivo en la TV de la bodega.
+¿Sabes qué porcentaje de tus pedidos llega a tiempo? Con SIGTOC lo sabes en un vistazo: cumplimiento de SLA por etapa, tiempo real contra el límite y dónde se atascan los pedidos, comparado con el periodo anterior.
 
-4 etapas, SLA en vivo, stand by, preventas, pago con comprobante y auditoría de cada paso. Una sola torre de control para toda tu operación.
+Y para el equipo: alertas push antes de que se venza el SLA, auditoría de cada movimiento (quién, qué, cuándo y por qué) y el mismo tablero en el PC, el celular de bodega y la TV.

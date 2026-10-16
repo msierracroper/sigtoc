@@ -69,8 +69,8 @@ Deno.serve(async (req) => {
       const state = slaState(order, globalSla, now);
       if ((state === "alerta" || state === "excedido") && order.last_notified_state !== state) {
         const stageName = STAGE_NAMES[order.current_stage];
-        const title = state === "excedido" ? `SLA excedido - ${order.id}` : `SLA por vencer - ${order.id}`;
-        const body = `${order.cliente} esta en ${stageName} y ${state === "excedido" ? "supero" : "esta por superar"} el tiempo limite.`;
+        const title = state === "excedido" ? `SLA excedido · ${order.id}` : `SLA por vencer · ${order.id}`;
+        const body = `${order.cliente} está en ${stageName} y ${state === "excedido" ? "superó" : "está por superar"} el tiempo límite.`;
         const payload = JSON.stringify({ title, body, url: `${SITE_URL}/?order=${order.id}`, tag: order.id });
 
         for (const sub of subs) {
