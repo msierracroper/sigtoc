@@ -2,6 +2,8 @@
 
 Sistema de gestión documental y trazabilidad de órdenes de compra con auditoría y alertas de SLA. Producto **comercial**, pensado para venderse a empresas de logística/distribución. La propuesta de venta principal es el seguimiento de SLA por etapa y la capacidad de auditoría completa (quién hizo qué, cuándo, y por qué).
 
+**Instalar para un cliente:** ver [IMPLEMENTACION.md](IMPLEMENTACION.md) (cuentas nuevas de Supabase y Cloudflare Pages, scripts en `backend/supabase/instalacion/`, respaldo en `backend/backup/`).
+
 Origen: nació de un prototipo HTML estático + un diagrama de flujo, y evolucionó iterativamente con Claude hasta una app funcional con backend real.
 
 ---
@@ -272,7 +274,7 @@ npm run dev       # servidor de desarrollo
 npm run build     # build de producción (verificar que compile sin errores antes de cada push)
 ```
 
-No hace falta `.env.local` para que funcione (las credenciales anon/públicas están hardcodeadas como respaldo en `frontend/src/lib/supabaseClient.js`), pero si se quiere usar variables de entorno, ver `frontend/.env.example` (el `.env.local` va dentro de `frontend/`).
+Hace falta `frontend/.env.local` (ver `frontend/.env.example`): la app ya no trae credenciales por defecto, para que una instalación nunca apunte a otra. En local apunta al proyecto de demo y lleva `VITE_ALLOW_SIGNUP=true`. Las fotos se comprimen en el navegador antes de subir (`frontend/src/utils/image.js`).
 
 ## 10. Flujo de trabajo esperado a partir de ahora
 

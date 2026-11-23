@@ -7,8 +7,9 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
+// Sin clave VAPID configurada (VITE_VAPID_PUBLIC_KEY) las alertas push quedan desactivadas
 export function isPushSupported() {
-  return "serviceWorker" in navigator && "PushManager" in window;
+  return !!VAPID_PUBLIC_KEY && "serviceWorker" in navigator && "PushManager" in window;
 }
 
 // Registra public/sw.js y avisa si este dispositivo ya tiene suscripción push

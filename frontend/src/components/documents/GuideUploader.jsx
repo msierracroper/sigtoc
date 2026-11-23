@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { uploadGuideFile } from "../../services/storage";
+import { uploadGuideFile, TOO_LARGE_MESSAGE } from "../../services/storage";
 import FileSlot from "./FileSlot";
 
 export default function GuideUploader({ orderId, label, onUploaded, uploadedPath }) {
@@ -13,7 +13,7 @@ export default function GuideUploader({ orderId, label, onUploaded, uploadedPath
     setBusy(true); setError("");
     const { path, error: err } = await uploadGuideFile(orderId, file);
     setBusy(false);
-    if (err) { setError("No se pudo subir el archivo. Revisa tu conexión e inténtalo de nuevo."); return; }
+    if (err) { setError(err.code === "too_large" ? TOO_LARGE_MESSAGE : "No se pudo subir el archivo. Revisa tu conexión e inténtalo de nuevo."); return; }
     onUploaded(path);
   }
 

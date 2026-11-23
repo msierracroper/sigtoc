@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { CreditCard } from "lucide-react";
-import { uploadPaymentProof } from "../../services/storage";
+import { uploadPaymentProof, TOO_LARGE_MESSAGE } from "../../services/storage";
 import { fmtShort, shortUser } from "../../utils/format";
 import Badge from "../ui/Badge";
 import FileSlot from "../documents/FileSlot";
@@ -25,7 +25,7 @@ export default function PaymentPanel({ order, onSetPaid, onSetProof, readOnly, e
     if (!file) return;
     setUploading(true); setError("");
     const { path, error: err } = await uploadPaymentProof(order.id, file);
-    if (err) { setUploading(false); setError("No se pudo subir el comprobante. Revisa tu conexión e inténtalo de nuevo."); return; }
+    if (err) { setUploading(false); setError(err.code === "too_large" ? TOO_LARGE_MESSAGE : "No se pudo subir el comprobante. Revisa tu conexión e inténtalo de nuevo."); return; }
     await onSetProof(path);
     setUploading(false);
   }

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { uploadOrderPdf } from "../../services/storage";
+import { uploadOrderPdf, TOO_LARGE_MESSAGE } from "../../services/storage";
 import FileSlot from "./FileSlot";
 
 export default function PdfUploader({ orderId, kind, label, required, onUploaded, uploadedPath }) {
@@ -14,7 +14,7 @@ export default function PdfUploader({ orderId, kind, label, required, onUploaded
     setBusy(true); setError("");
     const { path, error: err } = await uploadOrderPdf(orderId, kind, file);
     setBusy(false);
-    if (err) { setError("No se pudo subir el archivo. Revisa tu conexión e inténtalo de nuevo."); return; }
+    if (err) { setError(err.code === "too_large" ? TOO_LARGE_MESSAGE : "No se pudo subir el archivo. Revisa tu conexión e inténtalo de nuevo."); return; }
     onUploaded(path);
   }
 

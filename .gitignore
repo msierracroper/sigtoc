@@ -12,3 +12,6 @@ backend/supabase/.temp
 
 # Video de lanzamiento (brag): cuadros y herramientas temporales
 brag-output/work/
+
+# Respaldo: contiene la service_role key
+backend/backup/backup.env

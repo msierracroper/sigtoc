@@ -15,6 +15,10 @@ function friendlyError(err) {
   return "No pudimos iniciar sesión. Inténtalo de nuevo.";
 }
 
+// En producción los usuarios los crea el administrador (Supabase → Authentication → Add user)
+// y el registro público queda apagado. Solo se muestra "Crear cuenta" con VITE_ALLOW_SIGNUP=true.
+const ALLOW_SIGNUP = import.meta.env.VITE_ALLOW_SIGNUP === "true";
+
 /* ============ LOGIN / SIGNUP (Supabase Auth) ============ */
 export default function LoginScreen({ onAuthed }) {
   const [mode, setMode] = useState("login");
@@ -82,12 +86,16 @@ export default function LoginScreen({ onAuthed }) {
             {mode === "login" ? "Ingresar" : "Crear cuenta"}
           </Button>
         </form>
+        {ALLOW_SIGNUP ? (
         <div className="flex items-center justify-center gap-2 mt-4 text-[13px] text-ink2">
           {mode === "login" ? "¿Primera vez?" : "¿Ya tienes cuenta?"}
           <Button size="sm" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setInfo(""); }}>
             {mode === "login" ? "Crear cuenta" : "Iniciar sesión"}
           </Button>
         </div>
+        ) : (
+          <p className="text-center mt-4 text-[13px] text-ink2">¿No tienes acceso? Pídeselo al administrador.</p>
+        )}
       </div>
     </div>
   );
