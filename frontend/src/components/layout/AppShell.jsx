@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Layers, BarChart3, Clock3, Bell, BellOff, Search, Menu, X, LogOut, MonitorPlay, Tags, Truck } from "lucide-react";
+import { Layers, BarChart3, Clock3, Bell, BellOff, Search, Menu, X, LogOut, MonitorPlay, Tags, Truck, Users, History } from "lucide-react";
 import AlertBell from "./AlertBell";
 
 export const ORDER_VIEWS = [
@@ -20,7 +20,7 @@ function NavItem({ icon: Icon, label, active, onClick, count }) {
 }
 
 export default function AppShell({
-  email, page, ordersView, alertsCount, orders, slaSettings, now, search, onSearch,
+  email, isAdmin, page, ordersView, alertsCount, orders, slaSettings, now, search, onSearch,
   onNavigate, onOpenOrder, onOpenSla, onOpenOrigins, onOpenCarriers, pushEnabled, onTogglePush, onLogout, children,
 }) {
   const [drawer, setDrawer] = useState(false);
@@ -52,10 +52,17 @@ export default function AppShell({
         </button>
       ))}
       <NavItem icon={BarChart3} label="Reportes" active={page === "reports"} onClick={() => go("reports")} />
-      <NavItem icon={Clock3} label="Configuración de SLA" onClick={() => { onOpenSla(); setDrawer(false); }} />
-      <NavItem icon={Tags} label="Orígenes de venta" onClick={() => { onOpenOrigins(); setDrawer(false); }} />
-      <NavItem icon={Truck} label="Transportadoras" onClick={() => { onOpenCarriers(); setDrawer(false); }} />
       <NavItem icon={MonitorPlay} label="Tablero para TV" onClick={() => { window.open("/tablero", "_blank", "noopener"); setDrawer(false); }} />
+      {isAdmin && (
+        <>
+          <p className="mt-4 mb-1 px-2.5 text-[11.5px] font-semibold uppercase tracking-wide text-ink3">Administración</p>
+          <NavItem icon={Clock3} label="Configuración de SLA" onClick={() => { onOpenSla(); setDrawer(false); }} />
+          <NavItem icon={Tags} label="Orígenes de venta" onClick={() => { onOpenOrigins(); setDrawer(false); }} />
+          <NavItem icon={Truck} label="Transportadoras" onClick={() => { onOpenCarriers(); setDrawer(false); }} />
+          <NavItem icon={Users} label="Usuarios" active={page === "users"} onClick={() => go("users")} />
+          <NavItem icon={History} label="Actividad" active={page === "activity"} onClick={() => go("activity")} />
+        </>
+      )}
       <div className="mt-auto pt-3">
         <button onClick={onTogglePush}
           className="w-full h-10 sm:h-8 rounded-lg flex items-center gap-2.5 px-2.5 text-[14px] sm:text-[13px] font-semibold text-[#303030] hover:bg-black/[.04]">
@@ -91,7 +98,8 @@ export default function AppShell({
             </button>
             {menu && (
               <div className="absolute right-0 mt-2 w-64 card shadow-pop p-1.5 text-ink z-50">
-                <p className="px-2.5 py-2 text-[12.5px] text-ink2 truncate">{email}</p>
+                <p className="px-2.5 pt-2 text-[12.5px] text-ink2 truncate">{email}</p>
+                <p className="px-2.5 pb-2 text-[12px] font-semibold text-ink">{isAdmin ? "Administrador" : "Operador"}</p>
                 <button onClick={onLogout} className="w-full h-9 px-2.5 rounded-lg flex items-center gap-2 text-[13.5px] font-semibold hover:bg-surface2">
                   <LogOut size={16} /> Cerrar sesión
                 </button>

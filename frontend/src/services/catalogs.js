@@ -16,6 +16,7 @@ export async function createCatalogItem(kind, name, userId) {
 }
 
 export async function updateCatalogItem(kind, id, changes) {
-  const { error } = await supabase.from(CATALOG_TABLES[kind]).update(changes).eq("id", id);
+  const { data, error } = await supabase.from(CATALOG_TABLES[kind]).update(changes).eq("id", id).select("id");
+  if (!error && !data?.length) return { error: { message: "sin permiso" } }; // RLS: solo admin
   return { error };
 }

@@ -69,13 +69,13 @@ function CatalogSelect({ id, label, placeholder, missing, empty, value, onChange
 // Origen de la venta (Etapa 1). Opciones en Configuración → Orígenes de venta.
 export function OriginSelect({ value, onChange, origins }) {
   return <CatalogSelect id="origen" label="Origen de la venta" placeholder="Selecciona de dónde viene la venta" value={value} onChange={onChange} items={origins}
-    missing="No se pudieron cargar los orígenes de venta." empty="Aún no hay orígenes configurados. Agrégalos en Configuración → Orígenes de venta." />;
+    missing="No se pudieron cargar los orígenes de venta." empty="Aún no hay orígenes configurados. Un administrador puede agregarlos en Administración → Orígenes de venta." />;
 }
 
 // Transportadora (Etapa 4, envío con guía). Opciones en Configuración → Transportadoras.
 export function CarrierSelect({ value, onChange, carriers }) {
   return <CatalogSelect id="transportadora" label="Transportadora" placeholder="Selecciona la transportadora" value={value} onChange={onChange} items={carriers}
-    missing="No se pudieron cargar las transportadoras." empty="Aún no hay transportadoras configuradas. Agrégalas en Configuración → Transportadoras." />;
+    missing="No se pudieron cargar las transportadoras." empty="Aún no hay transportadoras configuradas. Un administrador puede agregarlas en Administración → Transportadoras." />;
 }
 
 // Estado del guardado automático del borrador

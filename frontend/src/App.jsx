@@ -6,6 +6,7 @@ import * as ordersApi from "./services/orders";
 import { fetchSlaSettings, saveSlaSettings } from "./services/settings";
 import { subscribeToChanges } from "./services/realtime";
 import { fetchCatalog, createCatalogItem, updateCatalogItem } from "./services/catalogs";
+import { fetchMyRole } from "./services/roles";
 import { isPushSupported, registerServiceWorker, getPushSubscription, subscribePush, unsubscribePush } from "./services/push";
 import LoginScreen from "./components/auth/LoginScreen";
 import AppShell from "./components/layout/AppShell";
@@ -17,6 +18,8 @@ import SlaSettingsModal from "./components/settings/SlaSettingsModal";
 import CatalogModal from "./components/settings/CatalogModal";
 import Toast from "./components/ui/Toast";
 import BoardView from "./components/board/BoardView";
+import ActivityPage from "./components/admin/ActivityPage";
+import UsersPage from "./components/admin/UsersPage";
 
 // Modo tablero (TV): /tablero o /tablero?etapa=bodega
 const IS_BOARD = window.location.pathname.replace(/\/+$/, "") === "/tablero";
@@ -45,7 +48,9 @@ export default function App() {
   const [session, setSession] = useState(undefined);
   const [orders, setOrders] = useState([]);
   const [slaSettings, setSlaSettings] = useState(DEFAULT_SLA);
-  const [page, setPage] = useState("orders"); // "orders" | "reports"
+  const [page, setPage] = useState("orders"); // "orders" | "reports" | "users" | "activity"
+  const [role, setRole] = useState(null); // "admin" | "operador"; null mientras carga (se trata como operador)
+  const isAdmin = role === "admin";
   const [ordersTab, setOrdersTab] = useState("todos");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(null);
@@ -124,7 +129,7 @@ export default function App() {
     if (!session) return;
     loadOrders();
     loadSlaSettings();
-    if (!IS_BOARD) { loadCatalog("origins"); loadCatalog("carriers"); }
+    if (!IS_BOARD) { loadCatalog("origins"); loadCatalog("carriers"); setRole(null); fetchMyRole(session.user.id).then(setRole); }
     const unsubscribe = subscribeToChanges({ onOrders: loadOrders, onSettings: loadSlaSettings });
     const poll = IS_BOARD ? setInterval(() => { loadOrders(); loadSlaSettings(); }, BOARD_REFRESH_MS) : null;
     return () => { unsubscribe(); if (poll) clearInterval(poll); };
@@ -273,12 +278,16 @@ export default function App() {
   return (
     <>
       <AppShell
-        email={session.user.email} page={page} ordersView={ordersTab} alertsCount={alertsCount}
+        email={session.user.email} isAdmin={isAdmin} page={page} ordersView={ordersTab} alertsCount={alertsCount}
         orders={orders} slaSettings={slaSettings} now={now} search={search} onSearch={setSearch}
         onNavigate={navigate} onOpenOrder={openOrder} onOpenSla={() => setShowSlaSettings(true)} onOpenOrigins={() => setCatalogModal("origins")} onOpenCarriers={() => setCatalogModal("carriers")}
         pushEnabled={pushEnabled} onTogglePush={togglePush} onLogout={() => auth.signOut()}>
         {page === "reports" ? (
           <ReportsView orders={orders} slaSettings={slaSettings} now={now} onOpenOrder={openOrder} />
+        ) : page === "users" && isAdmin ? (
+          <UsersPage myId={session.user.id} notify={notify} />
+        ) : page === "activity" && isAdmin ? (
+          <ActivityPage orders={orders} onOpenOrder={openOrder} />
         ) : selected ? (
           <OrderDetail order={selected} now={now} slaSettings={slaSettings} origins={origins} carriers={carriers} onSetPickup={handleSetPickup} onBack={() => setSelectedId(null)}
             onFinalizeStage={handleFinalizeStage} onCancelOrder={handleCancelOrder} onEditStage={handleEditStage}
@@ -291,11 +300,11 @@ export default function App() {
       </AppShell>
 
       {showNewOrder && <NewOrderModal onClose={() => setShowNewOrder(false)} onCreate={handleCreate} />}
-      {catalogModal && (
+      {catalogModal && isAdmin && (
         <CatalogModal kind={catalogModal} items={(catalogModal === "origins" ? origins : carriers) || []} onClose={() => setCatalogModal(null)}
           onCreate={(name) => handleCreateCatalogItem(catalogModal, name)} onUpdate={(id, changes) => handleUpdateCatalogItem(catalogModal, id, changes)} />
       )}
-      {showSlaSettings && <SlaSettingsModal current={slaSettings} onClose={() => setShowSlaSettings(false)} onSave={handleSaveSlaSettings} />}
+      {showSlaSettings && isAdmin && <SlaSettingsModal current={slaSettings} onClose={() => setShowSlaSettings(false)} onSave={handleSaveSlaSettings} />}
       <Toast toast={toast} onClose={closeToast} />
     </>
   );

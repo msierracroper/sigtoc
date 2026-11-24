@@ -29,6 +29,12 @@ Con ese correo se crean Supabase y Cloudflare, así **ellos son dueños** de los
 1. **SQL Editor → New query**: pega todo `backend/supabase/instalacion/01-esquema.sql` → **Run**.
    Crea tablas, permisos (RLS), el bucket privado de archivos, los catálogos iniciales y Realtime.
 2. **Authentication → Users → Add user → Create new user** por cada persona del equipo (correo + contraseña temporal, con *Auto Confirm User* marcado).
+   Toda cuenta nueva entra como **operador** (hace todo el flujo de pedidos, sin tocar la configuración).
+3. Nombra al menos un **administrador** (configuración, usuarios y actividad). En SQL Editor, con sus correos:
+   ```sql
+   update public.user_roles set role = admin where email in (jefe@empresa.com, otro.jefe@empresa.com);
+   ```
+   Después, los administradores cambian roles desde la app (**Administración → Usuarios**). Todo cambio de configuración y de rol queda en **Administración → Actividad**, junto con lo que cada usuario hace en los pedidos.
 
 ## 4. Alertas push de SLA (Edge Function + cron)
 

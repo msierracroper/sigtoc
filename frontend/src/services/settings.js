@@ -7,7 +7,9 @@ export async function fetchSlaSettings() {
   return data.sla_config;
 }
 
+// Si la base rechaza el cambio por permisos (solo admin), no devuelve error sino 0 filas: se trata como error.
 export async function saveSlaSettings(newSla) {
-  const { error } = await supabase.from("app_settings").update({ sla_config: newSla }).eq("id", true);
+  const { data, error } = await supabase.from("app_settings").update({ sla_config: newSla }).eq("id", true).select("id");
+  if (!error && !data?.length) return { error: { message: "sin permiso" } };
   return { error };
 }
