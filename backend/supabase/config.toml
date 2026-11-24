@@ -6,3 +6,7 @@ project_id = "tpxglussuqmvhprrjwqz"
 # Si se despliega sin esto, la CLI activa verify_jwt y el cron empieza a fallar con 401.
 [functions.sla-push-check]
 verify_jwt = false
+
+# Módulo de usuarios: la llama la app con la sesión de un admin (se valida su JWT y su rol).
+[functions.admin-users]
+verify_jwt = true

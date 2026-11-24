@@ -7,6 +7,7 @@ import Button from "../ui/Button";
 function friendlyError(err) {
   const msg = (err?.message || "").toLowerCase();
   if (msg.includes("invalid login")) return "Correo o contraseña incorrectos.";
+  if (msg.includes("banned")) return "Tu acceso está desactivado. Habla con un administrador.";
   if (msg.includes("email not confirmed")) return "Confirma tu correo antes de iniciar sesión.";
   if (msg.includes("already registered")) return "Ya existe una cuenta con este correo. Inicia sesión.";
   if (msg.includes("password should be")) return "La contraseña debe tener al menos 6 caracteres.";

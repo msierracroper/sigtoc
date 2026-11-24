@@ -28,7 +28,7 @@ Con ese correo se crean Supabase y Cloudflare, así **ellos son dueños** de los
 
 1. **SQL Editor → New query**: pega todo `backend/supabase/instalacion/01-esquema.sql` → **Run**.
    Crea tablas, permisos (RLS), el bucket privado de archivos, los catálogos iniciales y Realtime.
-2. **Crear las cuentas** con el script (desde tu PC, en la carpeta del proyecto):
+2. **Crear las cuentas.** Lo más simple: crea la primera cuenta (la tuya o la del jefe) con el script o a mano y hazla admin (ver abajo); desde ahí, los admins crean, editan, restablecen contraseñas, desactivan y eliminan usuarios en **Administración → Usuarios** (requiere la función `admin-users` del paso 4). Para cargar las 13 de una vez, usa el script (desde tu PC, en la carpeta del proyecto):
    - En `backend/backup/` crea `backup.env` desde `backup.env.example` con la URL y la clave `service_role` del cliente (`BACKUP_DIR` puede ser cualquier carpeta).
    - Llena un CSV como `backend/backup/usuarios.ejemplo.csv` (`nombre;correo;rol`, se puede guardar desde Excel como *CSV delimitado*). Rol: `admin` u `operador`.
    ```bash
@@ -66,6 +66,7 @@ node -e "console.log(require('crypto').randomBytes(24).toString('hex'))" # → C
 cd backend
 npx supabase login
 npx supabase functions deploy sla-push-check --project-ref <PROJECT_REF> --no-verify-jwt
+npx supabase functions deploy admin-users --project-ref <PROJECT_REF>   # módulo de usuarios (solo admin)
 ```
 
 4.4 SQL Editor: abre `backend/supabase/instalacion/02-cron-alertas.sql`, reemplaza `<PROJECT_REF>` y `<CRON_SECRET>` y córrelo.

@@ -12,19 +12,6 @@ export async function fetchMyRole(userId) {
   return data?.role || "operador";
 }
 
-export async function fetchUsers() {
-  const { data, error } = await supabase.from("user_roles").select("user_id, email, role, created_at").order("email");
-  if (error) return null;
-  return data;
-}
-
-export async function setUserRole(userId, role) {
-  const { data, error } = await supabase.from("user_roles").update({ role }).eq("user_id", userId).select("user_id");
-  if (error) return { error };
-  if (!data?.length) return { error: { message: "sin permiso" } };
-  return { error: null };
-}
-
 // Actividad de configuración (solo admin; la escriben triggers de la base)
 export async function fetchActivity(limit = 500) {
   const { data, error } = await supabase.from("activity_log").select("id, ts, user_email, entity, action, details").order("ts", { ascending: false }).limit(limit);
