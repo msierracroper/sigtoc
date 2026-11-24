@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Cotización SIGTOC · C&amp;C Sonido</title>
+<style>
+  @page { size: Letter; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #1F2328; font-size: 10.5pt; line-height: 1.5; background: #fff; }
+  .page { width: 8.5in; height: 11in; overflow: hidden; padding: 0.65in 0.8in 0.5in; display: flex; flex-direction: column; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 2px solid #1F2328; }
+  .brand { font-size: 20pt; font-weight: 700; letter-spacing: -0.02em; }
+  .brand small { display: block; font-size: 9.5pt; font-weight: 400; color: #616A75; letter-spacing: 0; }
+  .doc { text-align: right; }
+  .doc h1 { font-size: 15pt; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .doc p { color: #616A75; font-size: 9.5pt; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 22px 0; }
+  .label { font-size: 8pt; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #616A75; margin-bottom: 4px; }
+  .parties strong { font-size: 11pt; }
+  .intro { margin-bottom: 18px; }
+  h2 { font-size: 11pt; font-weight: 600; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+  th { text-align: left; font-size: 8pt; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #616A75; padding: 8px 10px; background: #F4F5F7; }
+  th.num, td.num { text-align: right; white-space: nowrap; }
+  td { padding: 12px 10px; vertical-align: top; border-bottom: 1px solid #E3E5E8; }
+  td .title { font-weight: 600; margin-bottom: 6px; }
+  td ul { padding-left: 16px; color: #3A4048; }
+  td li { margin-bottom: 2px; }
+  .total td { border-bottom: none; border-top: 2px solid #1F2328; font-weight: 700; font-size: 12pt; padding-top: 12px; }
+  .total .words { font-weight: 400; font-size: 9pt; color: #616A75; display: block; }
+  .terms { margin-bottom: 18px; }
+  .terms ul { padding-left: 16px; color: #3A4048; }
+  .terms li { margin-bottom: 3px; }
+  .closing { margin-bottom: 20px; }
+  .signature { margin-top: auto; }
+  .signature .line { width: 260px; border-top: 1px solid #1F2328; margin-bottom: 6px; }
+  .signature strong { font-size: 11pt; }
+  .signature p { color: #3A4048; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brand">SIGTOC<small>Sistema de control de pedidos</small></div>
+    <div class="doc">
+      <h1>Cotización</h1>
+      <p>N.º COT-2026-001</p>
+      <p>Fecha: 4 de noviembre de 2026</p>
+      <p>Válida hasta: 4 de diciembre de 2026</p>
+    </div>
+  </header>
+
+  <section class="parties">
+    <div>
+      <div class="label">Para</div>
+      <strong>C&amp;C Sonido</strong>
+    </div>
+    <div>
+      <div class="label">De</div>
+      <strong>Mauricio Sierra Cifuentes</strong>
+      <p>Ingeniero en Sistemas · Software Developer</p>
+      <p>mauricio.sierra3@gmail.com</p>
+    </div>
+  </section>
+
+  <p class="intro">Reciban un cordial saludo. Por medio de la presente me permito presentar la propuesta económica para la entrega e implementación del software SIGTOC en su empresa.</p>
+
+  <table>
+    <thead>
+      <tr><th>Descripción</th><th class="num">Valor</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="title">SIGTOC · Software web de control de pedidos</div>
+          <ul>
+            <li>Seguimiento de cada pedido en 4 etapas: Ingreso, Bodega, Facturación y Despacho.</li>
+            <li>Tiempos límite (SLA) por etapa, con alertas al celular antes de que se venzan.</li>
+            <li>Auditoría completa: quién hizo cada movimiento, cuándo y por qué.</li>
+            <li>Reportes de cumplimiento, tiempos por etapa y pedidos atrasados.</li>
+            <li>Funciona en PC, celular (con lector de códigos) y como tablero en TV.</li>
+            <li>Usuarios por rol, puesta en producción y capacitación inicial.</li>
+          </ul>
+        </td>
+        <td class="num">$3.300.000</td>
+      </tr>
+      <tr class="total">
+        <td>Valor total<span class="words">Tres millones trescientos mil pesos colombianos</span></td>
+        <td class="num">$3.300.000 COP</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <section class="terms">
+    <h2>Condiciones</h2>
+    <ul>
+      <li>Forma de pago: 50 % a la aceptación de la cotización y 50 % a la entrega del software en funcionamiento.</li>
+      <li>Soporte: corrección de errores sin costo durante los 3 meses siguientes a la entrega.</li>
+      <li>No incluye los costos de los servicios de alojamiento en la nube (servidor y base de datos), que quedan a nombre de la empresa.</li>
+      <li>Esta cotización tiene una validez de 30 días calendario.</li>
+    </ul>
+  </section>
+
+  <p class="closing">Quedo atento a cualquier inquietud o ajuste que consideren necesario.</p>
+
+  <div class="signature">
+    <p>Cordialmente,</p>
+    <div style="height:36px"></div>
+    <div class="line"></div>
+    <strong>Mauricio Sierra Cifuentes</strong>
+    <p>Ingeniero en Sistemas · Software Developer</p>
+  </div>
+</div>
+</body>
+</html>
