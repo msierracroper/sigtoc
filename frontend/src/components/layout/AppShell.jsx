@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Layers, BarChart3, Clock3, Bell, BellOff, Search, Menu, X, LogOut, MonitorPlay, Tags, Truck, Users, History } from "lucide-react";
+import { Layers, BarChart3, Clock3, Bell, BellOff, Search, Menu, X, LogOut, MonitorPlay, Tags, Truck, Users, History, KeyRound } from "lucide-react";
 import AlertBell from "./AlertBell";
 
 export const ORDER_VIEWS = [
@@ -21,7 +21,7 @@ function NavItem({ icon: Icon, label, active, onClick, count }) {
 
 export default function AppShell({
   email, isAdmin, page, ordersView, alertsCount, orders, slaSettings, now, search, onSearch,
-  onNavigate, onOpenOrder, onOpenSla, onOpenOrigins, onOpenCarriers, pushEnabled, onTogglePush, onLogout, children,
+  onNavigate, onOpenOrder, onOpenSla, onOpenOrigins, onOpenCarriers, pushEnabled, onTogglePush, onLogout, onChangePassword, children,
 }) {
   const [drawer, setDrawer] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -51,11 +51,11 @@ export default function AppShell({
           {v.label}
         </button>
       ))}
-      <NavItem icon={BarChart3} label="Reportes" active={page === "reports"} onClick={() => go("reports")} />
       <NavItem icon={MonitorPlay} label="Tablero para TV" onClick={() => { window.open("/tablero", "_blank", "noopener"); setDrawer(false); }} />
       {isAdmin && (
         <>
           <p className="mt-4 mb-1 px-2.5 text-[11.5px] font-semibold uppercase tracking-wide text-ink3">Administración</p>
+          <NavItem icon={BarChart3} label="Reportes" active={page === "reports"} onClick={() => go("reports")} />
           <NavItem icon={Clock3} label="Configuración de SLA" onClick={() => { onOpenSla(); setDrawer(false); }} />
           <NavItem icon={Tags} label="Orígenes de venta" onClick={() => { onOpenOrigins(); setDrawer(false); }} />
           <NavItem icon={Truck} label="Transportadoras" onClick={() => { onOpenCarriers(); setDrawer(false); }} />
@@ -100,6 +100,9 @@ export default function AppShell({
               <div className="absolute right-0 mt-2 w-64 card shadow-pop p-1.5 text-ink z-50">
                 <p className="px-2.5 pt-2 text-[12.5px] text-ink2 truncate">{email}</p>
                 <p className="px-2.5 pb-2 text-[12px] font-semibold text-ink">{isAdmin ? "Administrador" : "Operador"}</p>
+                <button onClick={() => { setMenu(false); onChangePassword(); }} className="w-full h-9 px-2.5 rounded-lg flex items-center gap-2 text-[13.5px] font-semibold hover:bg-surface2">
+                  <KeyRound size={16} /> Cambiar contraseña
+                </button>
                 <button onClick={onLogout} className="w-full h-9 px-2.5 rounded-lg flex items-center gap-2 text-[13.5px] font-semibold hover:bg-surface2">
                   <LogOut size={16} /> Cerrar sesión
                 </button>

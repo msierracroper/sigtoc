@@ -20,6 +20,7 @@ import Toast from "./components/ui/Toast";
 import BoardView from "./components/board/BoardView";
 import ActivityPage from "./components/admin/ActivityPage";
 import UsersPage from "./components/admin/UsersPage";
+import ChangePasswordModal from "./components/auth/ChangePasswordModal";
 
 // Modo tablero (TV): /tablero o /tablero?etapa=bodega
 const IS_BOARD = window.location.pathname.replace(/\/+$/, "") === "/tablero";
@@ -56,6 +57,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [showSlaSettings, setShowSlaSettings] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [catalogModal, setCatalogModal] = useState(null); // "origins" | "carriers" | null
   const [origins, setOrigins] = useState([]); // null = no se pudieron cargar
   const [carriers, setCarriers] = useState([]);
@@ -281,8 +283,8 @@ export default function App() {
         email={session.user.email} isAdmin={isAdmin} page={page} ordersView={ordersTab} alertsCount={alertsCount}
         orders={orders} slaSettings={slaSettings} now={now} search={search} onSearch={setSearch}
         onNavigate={navigate} onOpenOrder={openOrder} onOpenSla={() => setShowSlaSettings(true)} onOpenOrigins={() => setCatalogModal("origins")} onOpenCarriers={() => setCatalogModal("carriers")}
-        pushEnabled={pushEnabled} onTogglePush={togglePush} onLogout={() => auth.signOut()}>
-        {page === "reports" ? (
+        pushEnabled={pushEnabled} onTogglePush={togglePush} onLogout={() => auth.signOut()} onChangePassword={() => setShowPassword(true)}>
+        {page === "reports" && isAdmin ? (
           <ReportsView orders={orders} slaSettings={slaSettings} now={now} onOpenOrder={openOrder} />
         ) : page === "users" && isAdmin ? (
           <UsersPage myId={session.user.id} notify={notify} />
@@ -305,6 +307,7 @@ export default function App() {
           onCreate={(name) => handleCreateCatalogItem(catalogModal, name)} onUpdate={(id, changes) => handleUpdateCatalogItem(catalogModal, id, changes)} />
       )}
       {showSlaSettings && isAdmin && <SlaSettingsModal current={slaSettings} onClose={() => setShowSlaSettings(false)} onSave={handleSaveSlaSettings} />}
+      {showPassword && <ChangePasswordModal onClose={() => setShowPassword(false)} notify={notify} />}
       <Toast toast={toast} onClose={closeToast} />
     </>
   );

@@ -22,3 +22,7 @@ export function signIn(email, password) {
 export function signOut() {
   return supabase.auth.signOut();
 }
+
+export function changePassword(password) {
+  return supabase.auth.updateUser({ password });
+}

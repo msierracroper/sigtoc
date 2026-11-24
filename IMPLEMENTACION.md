@@ -28,13 +28,18 @@ Con ese correo se crean Supabase y Cloudflare, así **ellos son dueños** de los
 
 1. **SQL Editor → New query**: pega todo `backend/supabase/instalacion/01-esquema.sql` → **Run**.
    Crea tablas, permisos (RLS), el bucket privado de archivos, los catálogos iniciales y Realtime.
-2. **Authentication → Users → Add user → Create new user** por cada persona del equipo (correo + contraseña temporal, con *Auto Confirm User* marcado).
-   Toda cuenta nueva entra como **operador** (hace todo el flujo de pedidos, sin tocar la configuración).
-3. Nombra al menos un **administrador** (configuración, usuarios y actividad). En SQL Editor, con sus correos:
-   ```sql
-   update public.user_roles set role = admin where email in (jefe@empresa.com, otro.jefe@empresa.com);
+2. **Crear las cuentas** con el script (desde tu PC, en la carpeta del proyecto):
+   - En `backend/backup/` crea `backup.env` desde `backup.env.example` con la URL y la clave `service_role` del cliente (`BACKUP_DIR` puede ser cualquier carpeta).
+   - Llena un CSV como `backend/backup/usuarios.ejemplo.csv` (`nombre;correo;rol`, se puede guardar desde Excel como *CSV delimitado*). Rol: `admin` u `operador`.
+   ```bash
+   node backend/backup/crear-usuarios.mjs usuarios.csv              # valida el archivo, no crea nada
+   node backend/backup/crear-usuarios.mjs usuarios.csv --confirmar  # crea las cuentas
    ```
-   Después, los administradores cambian roles desde la app (**Administración → Usuarios**). Todo cambio de configuración y de rol queda en **Administración → Actividad**, junto con lo que cada usuario hace en los pedidos.
+   Deja `usuarios-creados-<fecha>.csv` con la **contraseña temporal** de cada persona. Entrégalas, pide que cada uno la cambie al entrar (menú de la cuenta → **Cambiar contraseña**) y **borra ese archivo**.
+
+   **Roles:** el **administrador** hace todo (reportes, configuración de SLA, orígenes, transportadoras, usuarios y actividad). El **operador** hace todo el flujo de pedidos, incluido finalizar por anomalía con su motivo, pero no ve reportes ni configuración. Después, los administradores cambian roles desde **Administración → Usuarios**, y todo cambio de configuración y de rol queda en **Administración → Actividad** junto con lo que cada usuario hace en los pedidos.
+
+   Alternativa manual: **Authentication → Users → Add user** (con *Auto Confirm User*); la cuenta entra como operador y un admin le cambia el rol. Si aún no hay ningún admin: `update public.user_roles set role = admin where email = jefe@empresa.com;` en SQL Editor.
 
 ## 4. Alertas push de SLA (Edge Function + cron)
 

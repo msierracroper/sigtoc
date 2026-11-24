@@ -37,8 +37,8 @@ export default function UsersPage({ myId, notify }) {
         <Button size="sm" icon={RefreshCw} busy={loading} onClick={load}>Actualizar</Button>
       </div>
       <div className="card p-4 text-[13.5px] text-ink2 space-y-1">
-        <p><b className="font-semibold text-ink">Administrador:</b> todo, incluida la configuración (SLA, orígenes de venta, transportadoras), los usuarios y la actividad.</p>
-        <p><b className="font-semibold text-ink">Operador:</b> todo el flujo de pedidos (crear, avanzar etapas, pagos, stand by, correcciones) y los reportes, sin tocar la configuración.</p>
+        <p><b className="font-semibold text-ink">Administrador:</b> todo, incluidos los reportes, la configuración (SLA, orígenes de venta, transportadoras), los usuarios y la actividad.</p>
+        <p><b className="font-semibold text-ink">Operador:</b> todo el flujo de pedidos (crear, avanzar etapas, pagos, stand by, guías, correcciones, finalizar por anomalía con su motivo). No ve reportes ni configuración.</p>
       </div>
 
       <div className="card">

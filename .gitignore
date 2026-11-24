@@ -15,3 +15,5 @@ brag-output/work/
 
 # Respaldo: contiene la service_role key
 backend/backup/backup.env
+# Lista de usuarios creados: contiene contraseñas temporales
+backend/backup/usuarios-creados-*.csv
