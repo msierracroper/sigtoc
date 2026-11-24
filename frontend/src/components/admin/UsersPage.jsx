@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Users, RefreshCw, UserPlus, Pencil, KeyRound, Ban, CheckCircle2, Trash2, Copy, Check } from "lucide-react";
+import { Users, RefreshCw, UserPlus, Pencil, KeyRound, Ban, CheckCircle2, Trash2, Copy, Check, Eye, EyeOff, Wand2 } from "lucide-react";
 import { listUsers, createUser, updateUser, resetPassword, setUserActive, deleteUser } from "../../services/adminUsers";
 import { ROLES } from "../../services/roles";
 import { isValidEmail } from "../../utils/validation";
@@ -8,11 +8,46 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import Badge from "../ui/Badge";
 
+const MIN_PASSWORD = 8;
+
+// Contraseña legible (sin 0/O, 1/l/I): ej. Kp7m-Qx3a-Zr9w
+function generatePassword() {
+  const abc = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const c = [...crypto.getRandomValues(new Uint32Array(12))].map((n) => abc[n % abc.length]).join("");
+  return `${c.slice(0, 4)}-${c.slice(4, 8)}-${c.slice(8)}`;
+}
+
+// Campo de contraseña que pone el admin. Vacío = el sistema genera una temporal.
+function PasswordField({ id, value, onChange }) {
+  const [show, setShow] = useState(false);
+  const short = value && value.length < MIN_PASSWORD;
+  return (
+    <div>
+      <label className="label" htmlFor={id}>Contraseña</label>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <input id={id} type={show ? "text" : "password"} autoComplete="new-password" value={value} onChange={(e) => onChange(e.target.value)}
+            className="field pr-11" placeholder={`Mínimo ${MIN_PASSWORD} caracteres`} aria-invalid={short || undefined} />
+          <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
+            className="absolute right-0 top-0 h-full w-11 grid place-items-center text-ink2 hover:text-ink">
+            {show ? <EyeOff size={17} /> : <Eye size={17} />}
+          </button>
+        </div>
+        <Button type="button" icon={Wand2} onClick={() => { onChange(generatePassword()); setShow(true); }}>Generar</Button>
+      </div>
+      <p className={`text-[12.5px] mt-1.5 ${short ? "text-crit" : "text-ink2"}`}>
+        {short ? `Usa al menos ${MIN_PASSWORD} caracteres.` : "Si la dejas vacía se genera una temporal. La persona puede cambiarla después en el menú de su cuenta."}
+      </p>
+    </div>
+  );
+}
+
 // ---------- crear / editar ----------
 function UserFormModal({ user, isSelf, onClose, onSave }) {
   const [nombre, setNombre] = useState(user?.nombre || "");
   const [email, setEmail] = useState(user?.email || "");
   const [role, setRole] = useState(user?.role || "operador");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const editing = !!user;
@@ -20,15 +55,16 @@ function UserFormModal({ user, isSelf, onClose, onSave }) {
   async function submit(e) {
     e.preventDefault();
     if (!isValidEmail(email)) { setError("Escribe un correo válido."); return; }
+    if (!editing && password && password.length < MIN_PASSWORD) { setError(`La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`); return; }
     setBusy(true); setError("");
-    const err = await onSave({ nombre: nombre.trim(), email: email.trim().toLowerCase(), role });
+    const err = await onSave({ nombre: nombre.trim(), email: email.trim().toLowerCase(), role, ...(editing ? {} : { password }) });
     setBusy(false);
     if (err) setError(err);
   }
 
   return (
     <Modal title={editing ? "Editar usuario" : "Nuevo usuario"} onClose={onClose}
-      subtitle={editing ? user.email : "Se crea con una contraseña temporal que verás al guardar."}>
+      subtitle={editing ? user.email : "Puedes escribirle una contraseña o dejar que el sistema genere una."}>
       <form onSubmit={submit} className="space-y-4" noValidate>
         <div>
           <label className="label" htmlFor="u-nombre">Nombre</label>
@@ -46,6 +82,7 @@ function UserFormModal({ user, isSelf, onClose, onSave }) {
           </select>
           {isSelf && <p className="text-[12.5px] text-ink2 mt-1.5">No puedes cambiar tu propio rol.</p>}
         </div>
+        {!editing && <PasswordField id="u-password" value={password} onChange={setPassword} />}
         {error && <p className="text-[13px] font-medium text-crit" role="alert">{error}</p>}
         <div className="flex flex-wrap gap-2">
           <Button type="submit" variant="primary" busy={busy}>{editing ? "Guardar cambios" : "Crear usuario"}</Button>
@@ -65,12 +102,29 @@ function PasswordModal({ email, password, created, onClose }) {
   return (
     <Modal title={created ? "Usuario creado" : "Contraseña restablecida"} subtitle={email} onClose={onClose}
       footer={<Button variant="primary" onClick={onClose}>Listo</Button>}>
-      <p className="text-[13.5px]">Contraseña temporal:</p>
+      <p className="text-[13.5px]">Contraseña para iniciar sesión:</p>
       <div className="flex items-center gap-2 mt-2">
         <code className="flex-1 text-[20px] font-semibold tracking-wide bg-surface2 rounded-lg px-3 py-2.5 num select-all">{password}</code>
         <Button icon={copied ? Check : Copy} onClick={copy}>{copied ? "Copiada" : "Copiar"}</Button>
       </div>
       <p className="text-[12.5px] text-ink2 mt-3">Entrégasela a la persona por un medio privado. Al entrar, debe cambiarla en el menú de su cuenta → <b className="font-semibold">Cambiar contraseña</b>. Por seguridad no se vuelve a mostrar.</p>
+    </Modal>
+  );
+}
+
+// ---------- restablecer contraseña ----------
+function ResetModal({ user, onClose, onReset }) {
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const invalid = password && password.length < MIN_PASSWORD;
+  return (
+    <Modal title="Restablecer contraseña" subtitle={user.nombre ? `${user.nombre} · ${user.email}` : user.email} onClose={onClose}
+      footer={<>
+        <Button onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" busy={busy} disabled={invalid} onClick={async () => { setBusy(true); await onReset(password); setBusy(false); }}>Restablecer</Button>
+      </>}>
+      <p className="text-[13.5px] mb-4">La contraseña actual deja de funcionar.</p>
+      <PasswordField id="reset-password" value={password} onChange={setPassword} />
     </Modal>
   );
 }
@@ -130,8 +184,8 @@ export default function UsersPage({ myId, notify }) {
     return null;
   }
 
-  async function doReset(user) {
-    const { data, error } = await resetPassword(user.id);
+  async function doReset(user, password) {
+    const { data, error } = await resetPassword(user.id, password);
     if (error) { notify(error, "error"); close(); return; }
     setModal({ type: "password", created: false, user, password: data.password });
   }
@@ -205,10 +259,7 @@ export default function UsersPage({ myId, notify }) {
       {modal?.type === "new" && <UserFormModal onClose={close} onSave={saveNew} />}
       {modal?.type === "edit" && <UserFormModal user={modal.user} isSelf={modal.user.id === myId} onClose={close} onSave={(f) => saveEdit(modal.user, f)} />}
       {modal?.type === "password" && <PasswordModal email={modal.user.email} password={modal.password} created={modal.created} onClose={close} />}
-      {modal?.type === "reset" && (
-        <ConfirmModal title="Restablecer contraseña" confirmLabel="Restablecer" onClose={close} onConfirm={() => doReset(modal.user)}
-          message={`Se genera una contraseña temporal nueva para ${name(modal.user)} y la actual deja de funcionar.`} />
-      )}
+      {modal?.type === "reset" && <ResetModal user={modal.user} onClose={close} onReset={(pw) => doReset(modal.user, pw)} />}
       {modal?.type === "deactivate" && (
         <ConfirmModal title="Desactivar usuario" confirmLabel="Desactivar" onClose={close} onConfirm={() => doActive(modal.user, false)}
           message={`${name(modal.user)} no podrá iniciar sesión hasta que lo reactives. Su historial queda intacto. Es la opción recomendada cuando alguien sale de la empresa.`} />

@@ -23,6 +23,16 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ROLES = ["admin", "operador"];
 
 // Contraseña temporal legible (sin 0/O, 1/l/I): ej. Kp7m-Qx3a-Zr9w
+const MIN_PASSWORD = 8;
+
+// Contraseña que escribe el admin, o una temporal generada si la deja vacía
+function chosenPassword(value: unknown): { password?: string; error?: string } {
+  const typed = String(value ?? "").trim();
+  if (!typed) return { password: tempPassword() };
+  if (typed.length < MIN_PASSWORD) return { error: `La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.` };
+  return { password: typed };
+}
+
 function tempPassword() {
   const abc = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
   const bytes = crypto.getRandomValues(new Uint32Array(12));
@@ -72,7 +82,8 @@ Deno.serve(async (req) => {
       const nombre = String(body.nombre || "").trim();
       const role = ROLES.includes(body.role) ? body.role : "operador";
       if (!EMAIL_RE.test(email)) return fail("Correo inválido.");
-      const password = tempPassword();
+      const { password, error: pwErr } = chosenPassword(body.password);
+      if (pwErr) return fail(pwErr);
       const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { nombre } });
       if (error) return fail(/already|registered|exists/i.test(error.message) ? "Ya existe una cuenta con ese correo." : error.message);
       // La base crea el rol como operador al registrar la cuenta; se completa con nombre y rol
@@ -119,7 +130,8 @@ Deno.serve(async (req) => {
 
     if (action === "reset") {
       if (self) return fail("Para tu propia cuenta usa “Cambiar contraseña” en el menú de tu cuenta.");
-      const password = tempPassword();
+      const { password, error: pwErr } = chosenPassword(body.password);
+      if (pwErr) return fail(pwErr);
       const { error } = await admin.auth.admin.updateUserById(id, { password });
       if (error) throw error;
       await log(id, `Contraseña restablecida para ${who}.`); // la contraseña nunca se registra
